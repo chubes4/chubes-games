@@ -1,0 +1,87 @@
+/* 
+Oregon Trail Style for AI Adventure Game
+*/
+
+.wp-block-chubes-games-ai-adventure {
+    background-color: #000;
+    border: 2px solid #3a3a3a;
+    padding: 1rem;
+    font-family: 'Courier New', Courier, monospace;
+    color: #00ff00; // Classic green terminal text
+
+    .ai-adventure-game {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .story-log {
+        flex-grow: 1;
+        overflow-y: auto;
+        border: 1px dashed #00ff00;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        min-height: 200px; // Ensure it has some height
+    }
+
+    .story-entry {
+        margin-bottom: 1em;
+        line-height: 1.4;
+
+        &.player {
+            color: #00aaff; // A different color for player input
+            &::before {
+                content: '> ';
+            }
+        }
+
+        &.ai {
+            color: #00ff00;
+        }
+
+        &.error {
+            color: #ff0000;
+            font-weight: bold;
+        }
+    }
+
+    .player-input-form {
+        display: flex;
+
+        input[type="text"] {
+            flex-grow: 1;
+            background-color: #1a1a1a;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 0.5rem;
+            font-family: inherit;
+            margin-right: 1rem;
+
+            &:focus {
+                outline: none;
+                box-shadow: 0 0 5px #00ff00;
+            }
+        }
+
+        button {
+            background-color: transparent;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-family: inherit;
+            text-transform: uppercase;
+
+            &:hover {
+                background-color: #00ff00;
+                color: #000;
+            }
+
+            &:disabled {
+                border-color: #3a3a3a;
+                color: #3a3a3a;
+                cursor: not-allowed;
+            }
+        }
+    }
+} 

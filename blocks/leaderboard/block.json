@@ -1,0 +1,16 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 2,
+    "name": "chubes-games/leaderboard",
+    "title": "Game Leaderboard",
+    "description": "Displays the high scores for Chubes Games.",
+    "category": "widgets",
+    "icon": "star-filled",
+    "keywords": [ "scores", "leaderboard", "game" ],
+    "author": "Chris Huber",
+    "license": "GPL-2.0-or-later",
+    "textdomain": "leaderboard",
+    "editorScript": "file:../../build/leaderboard/index.js",
+    "editorStyle": "file:../../build/leaderboard/editor.css",
+    "style": "file:../../build/leaderboard/style-index.css"
+} 

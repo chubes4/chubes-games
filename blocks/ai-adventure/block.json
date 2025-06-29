@@ -1,0 +1,38 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "chubes-games/ai-adventure",
+	"version": "0.1.0",
+	"title": "AI Adventure",
+	"category": "widgets",
+	"icon": "games",
+	"description": "The main container block for an AI-powered text adventure.",
+	"example": {},
+	"supports": {
+		"html": false
+	},
+	"attributes": {
+		"title": {
+			"type": "string",
+			"source": "html",
+			"selector": "h2"
+		},
+		"adventurePrompt": {
+			"type": "string",
+			"source": "html",
+			"selector": ".adventure-prompt-storage p"
+		},
+		"gameMasterPersona": {
+			"type": "string",
+			"default": "You are a helpful and creative text-based adventure game master."
+		}
+	},
+	"textdomain": "ai-adventure",
+	"editorScript": "file:../../build/ai-adventure/index.js",
+	"viewScript": "file:../../build/ai-adventure/view.js",
+	"editorStyle": "file:../../build/ai-adventure/editor.css",
+	"style": "file:../../build/ai-adventure/style.css",
+	"providesContext": {
+		"chubes-games/adventurePrompt": "adventurePrompt"
+	}
+}

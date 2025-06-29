@@ -1,0 +1,12 @@
+.wp-block-chubes-games-snake {
+    border: 1px dashed #ccc;
+    padding: 20px;
+    background-color: #f8f8f8;
+    color: #333;
+    text-align: center;
+    font-size: 1.1em;
+}
+
+.wp-block-chubes-games-snake p {
+    margin: 0;
+} 

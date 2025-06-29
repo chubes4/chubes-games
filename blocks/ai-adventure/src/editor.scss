@@ -1,0 +1,76 @@
+/* 
+Editor Styles for AI Adventure Nested Card Structure
+*/
+
+// Main Adventure Block - The outer container
+.wp-block-chubes-games-ai-adventure {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+    .adventure-title {
+        border-bottom: 2px solid #999;
+        padding-bottom: 0.5rem;
+        margin-top: 0;
+    }
+
+    .adventure-prompt {
+        font-style: italic;
+        color: #555;
+    }
+}
+
+// Path Block - The first level of nesting
+.wp-block-chubes-games-ai-adventure-path {
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-top: 1rem;
+    position: relative;
+    
+    &::before {
+        content: "Path";
+        position: absolute;
+        top: -10px;
+        left: 10px;
+        background-color: #e0e0e0;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+        color: #333;
+    }
+}
+
+// Step Block - The second level of nesting
+.wp-block-chubes-games-ai-adventure-step {
+    background-color: #f9f9f9;
+    border: 1px dashed #ccc;
+    padding: 1rem;
+    margin-top: 1rem;
+    position: relative;
+
+    &::before {
+        content: "Step";
+        position: absolute;
+        top: -10px;
+        left: 10px;
+        background-color: #e8f4ff;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+        color: #005a9c;
+    }
+
+    .trigger-item {
+        border: 1px solid #e0e0e0;
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+        border-radius: 3px;
+        background: #fff;
+    }
+} 

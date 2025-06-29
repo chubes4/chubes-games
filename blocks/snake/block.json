@@ -1,0 +1,19 @@
+{
+    "apiVersion": 2,
+    "name": "chubes-games/snake",
+    "title": "Snake Game",
+    "description": "A playable Snake game block. Use arrow keys to control the snake. Game over if you crash into yourself.",
+    "category": "widgets",
+    "icon": "games",
+    "keywords": [
+        "snake",
+        "game",
+        "arcade"
+    ],
+    "author": "Chris Huber",
+    "license": "GPL-2.0-or-later",
+    "editorScript": "file:../../build/snake/index.js",
+    "viewScript": "file:../../build/snake/view.js",
+    "style": "file:../../build/snake/style-index.css",
+    "editorStyle": "file:../../build/snake/editor.css"
+} 
