@@ -20,7 +20,7 @@
 		"pathPrompt": {
 			"type": "string",
 			"source": "html",
-			"selector": "p"
+			"selector": ".ai-adventure-path-prompt"
 		}
 	},
 	"parent": [ "chubes-games/ai-adventure" ],

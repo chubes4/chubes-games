@@ -30,7 +30,7 @@ function chubes_games_register_all_blocks() {
 
         $render_callback_map = [
             'chubes-games/leaderboard'  => 'chubes_games_render_leaderboard_block',
-            'chubes-games/ai-adventure' => 'chubes_games_render_ai_adventure_block',
+            // 'chubes-games/ai-adventure' => 'chubes_games_render_ai_adventure_block', // Use standard save function instead
             'chubes-games/snake'        => 'chubes_games_render_js_app_holder',
         ];
         
@@ -122,7 +122,13 @@ function chubes_games_render_js_app_holder( $block_attributes, $content, $block 
  * @return string The HTML of the block.
  */
 function chubes_games_render_ai_adventure_block( $attributes, $content, $block ) {
-    $wrapper_attributes = get_block_wrapper_attributes();
+    $wrapper_attributes = get_block_wrapper_attributes([ 'class' => 'chubes-game-window' ]);
+    
+    // Debug: Log the block structure
+    error_log('AI Adventure Block - Attributes: ' . print_r($attributes, true));
+    error_log('AI Adventure Block - Inner blocks count: ' . count($block->inner_blocks));
+    error_log('AI Adventure Block - Inner blocks structure: ' . print_r($block->inner_blocks, true));
+    
     // Encode the attributes and the full inner block structure to be used by the React app.
     $encoded_attributes = wp_json_encode( $attributes );
     $encoded_inner_blocks = wp_json_encode( $block->inner_blocks );
@@ -286,23 +292,38 @@ function chubes_games_call_openai( $messages, $temperature = 0.2 ) {
 function chubes_games_handle_adventure_request( $request ) {
     $params = $request->get_json_params();
 
+    // Base system prompt that explains the game mechanics to the AI
+    $base_system_prompt = 'You are part of an interactive text-based adventure game engine. This is a "Choose Your Own Adventure" style game where:\n\n1. GAME STRUCTURE: The story is divided into "steps" connected by semantic triggers\n2. YOUR ROLE: You act as both a conversational AI and story progression detector  \n3. CONVERSATION MODE: Respond naturally and engagingly to player input\n4. PROGRESSION MODE: Detect when players have made story-changing decisions\n5. NARRATIVE STYLE: Be descriptive, immersive, and maintain consistent tone\n\nIMPORTANT: Players can chat freely about the current scene. Only advance the story when they have clearly made a decision that matches one of the available story branches.';
+
     $is_initial_turn = isset( $params['is_initial_turn'] ) && $params['is_initial_turn'];
     $persona = sanitize_text_field( $params['gameMasterPersona'] );
     $adventure_prompt = sanitize_text_field( $params['adventurePrompt'] );
+    $path_prompt = isset($params['pathPrompt']) ? sanitize_text_field( $params['pathPrompt'] ) : '';
+    $step_prompt = isset($params['stepPrompt']) ? sanitize_textarea_field( $params['stepPrompt'] ) : '';
+    $story_progression = isset($params['storyProgression']) && is_array($params['storyProgression']) ? $params['storyProgression'] : [];
+
+    // Format story progression for the prompt (last 10 steps)
+    $progression_lines = [];
+    $progression_slice = array_slice($story_progression, -10);
+    $i = 1;
+    foreach ($progression_slice as $entry) {
+        $step_action = isset($entry['stepAction']) ? $entry['stepAction'] : '';
+        $trigger_activated = isset($entry['triggerActivated']) ? $entry['triggerActivated'] : '';
+        $progression_lines[] = "$i. Step: \"$step_action\"\n   Player chose: \"$trigger_activated\"";
+        $i++;
+    }
+    $progression_text = empty($progression_lines) ? 'None yet.' : implode("\n", $progression_lines);
+    $progression_section = "Story Progression So Far:\n$progression_text\n";
 
     if ( $is_initial_turn ) {
-        // Handle the first turn to generate the starting narrative.
-        $path_prompt = sanitize_text_field( $params['pathPrompt'] );
-        $step_prompt = sanitize_textarea_field( $params['stepPrompt'] );
-
         $messages = array(
             array(
                 'role' => 'system',
-                'content' => "$persona. Adventure Context: $adventure_prompt. Path Context: $path_prompt. Your goal is to set the stage. Begin the story by paraphrasing the following scene. Make it engaging. Do not ask the player what to do, simply present the scene."
+                'content' => $base_system_prompt . "\n\n" . $persona . "\n\nAdventure Description: " . $adventure_prompt . "\nPath Description: " . $path_prompt . "\n\n" . $progression_section . "\nYour goal is to set the stage. Begin the story by presenting the following step action in an engaging way. Do not ask the player what to do, simply present the scene vividly."
             ),
             array(
                 'role' => 'user',
-                'content' => "Scene to narrate: $step_prompt"
+                'content' => "Step Action: " . $step_prompt
             )
         );
 
@@ -315,66 +336,74 @@ function chubes_games_handle_adventure_request( $request ) {
         return new WP_REST_Response( array( 'narrative' => $narrative ), 200 );
 
     } else {
-        // Handle subsequent turns for action classification.
-        $path_prompt = sanitize_text_field( $params['pathPrompt'] );
-        $step_prompt = sanitize_textarea_field( $params['stepPrompt'] );
         $player_input = sanitize_text_field( $params['playerInput'] );
-        $triggers = $params['triggers']; // This is an array of objects
-
-        // Basic validation for triggers
-        if ( ! is_array( $triggers ) || empty( $triggers ) ) {
-            return new WP_Error( 'invalid_triggers', 'Triggers are missing or invalid.', array( 'status' => 400 ) );
-        }
-
-        $system_prompt = "You are a decision-making AI. Your task is to analyze the player's action and determine which predefined story path they have triggered. Respond with ONLY the JSON object of the triggered path. Do not add conversational text. Adventure Context: $adventure_prompt. Current Scene: $step_prompt.";
-        
-        $user_prompt = "The player's action is: \"$player_input\"\n\nAvailable Triggers:\n" . json_encode( array_map(function($t) { return ['id' => $t['id'], 'action' => $t['action']]; }, $triggers ), JSON_PRETTY_PRINT);
-        
-        $messages = array(
-            array('role' => 'system', 'content' => $system_prompt),
-            array('role' => 'user', 'content' => $user_prompt)
+        $triggers = $params['triggers'] ?? [];
+        $conversation_history = isset($params['conversationHistory']) && is_array($params['conversationHistory']) ? $params['conversationHistory'] : [];
+        // Conversation AI
+        $conversation_messages = array(
+            array(
+                'role' => 'system',
+                'content' => $base_system_prompt . "\n\n" . $persona . "\n\nAdventure Description: " . $adventure_prompt . "\nPath Description: " . $path_prompt . "\n\n" . $progression_section . "\nCurrent Step Action: " . $step_prompt . "\n\nRespond naturally to the player's action. Be engaging and descriptive. Continue the conversation fluidly. Do not advance the story unless explicitly told to do so."
+            ),
+            array(
+                'role' => 'user',
+                'content' => "Player says/does: " . $player_input
+            )
         );
-
-        $ai_response = chubes_games_call_openai( $messages, 0.2 );
-
-        if ( is_wp_error( $ai_response ) ) {
-            return $ai_response;
-        }
         
-        // Find the start of the JSON object
-        $json_start = strpos($ai_response, '{');
-        if ($json_start === false) {
-            return new WP_Error('invalid_ai_response', 'AI response did not contain a valid JSON object.', array('status' => 500, 'response' => $ai_response));
+        $narrative_response = chubes_games_call_openai( $conversation_messages, 0.6 );
+
+        if ( is_wp_error( $narrative_response ) ) {
+            return $narrative_response;
         }
+
+        // Progression AI
+        $next_step_id = null;
+        if ( ! empty( $triggers ) && is_array( $triggers ) ) {
+            $triggers_list = array_map(function($t) { 
+                return [
+                    'id' => $t['id'], 
+                    'condition' => $t['action'],
+                    'description' => 'Trigger when: ' . $t['action']
+                ]; 
+            }, $triggers);
         
-        // Extract and decode the JSON part of the string
-        $json_string = substr($ai_response, $json_start);
-        $decoded_response = json_decode($json_string, true);
+            $progression_messages = array(
+                array(
+                    'role' => 'system',
+                    'content' => $base_system_prompt . "\n\n" . $persona . "\n\nAdventure Description: " . $adventure_prompt . "\nPath Description: " . $path_prompt . "\n\n" . $progression_section . "\nCurrent Step Action: " . $step_prompt . "\n\nYou are now in PROGRESSION ANALYSIS mode. Your job is to determine if the player's action semantically matches any of the available story branches.\n\nAvailable Story Branches:\n" . json_encode( $triggers_list, JSON_PRETTY_PRINT ) . "\n\nAnalyze the player's intent. Only progress the story if their action clearly matches one of the trigger conditions. Be semantic, not literal - understand the player's intent.\n\nRespond with ONLY a JSON object:\n- If no progression: {\"shouldProgress\": false}\n- If progression: {\"shouldProgress\": true, \"triggerId\": \"matching_trigger_id\"}"
+                ),
+                array(
+                    'role' => 'user',
+                    'content' => "Current step action: " . $step_prompt . "\nPlayer's action: " . $player_input . "\n\nDoes this action trigger any story progression?"
+                )
+            );
 
-        if ( json_last_error() !== JSON_ERROR_NONE ) {
-            return new WP_Error( 'invalid_json', 'AI response was not valid JSON.', array( 'status' => 500, 'response' => $ai_response ) );
-        }
+            $progression_response = chubes_games_call_openai( $progression_messages, 0.2 );
 
-        if ( ! isset( $decoded_response['id'] ) ) {
-            return new WP_Error( 'missing_id', 'AI response JSON is missing the "id" key.', array( 'status' => 500, 'response' => $ai_response ) );
-        }
-
-        $chosen_id = $decoded_response['id'];
-        $next_step_destination = null;
-
-        // Find the trigger with the matching ID to get the destination
-        foreach ($triggers as $trigger) {
-            if ($trigger['id'] == $chosen_id) {
-                $next_step_destination = $trigger['destination'];
+            if ( ! is_wp_error( $progression_response ) ) {
+                $json_start = strpos( $progression_response, '{' );
+                if ( $json_start !== false ) {
+                    $json_string = substr( $progression_response, $json_start );
+                    $progression_data = json_decode( $json_string, true );
+                    
+                    if ( isset( $progression_data['shouldProgress'] ) && $progression_data['shouldProgress'] && isset( $progression_data['triggerId'] ) ) {
+                        // Find the destination for this trigger
+                        foreach ( $triggers as $trigger ) {
+                            if ( $trigger['id'] == $progression_data['triggerId'] ) {
+                                $next_step_id = $trigger['destination'];
                 break;
             }
         }
-        
-        if ($next_step_destination === null) {
-            return new WP_Error('invalid_id', 'AI chose an invalid trigger ID.', array('status' => 500, 'chosen_id' => $chosen_id));
+                    }
+                }
+            }
         }
 
-        return new WP_REST_Response( array( 'nextStepId' => $next_step_destination ), 200 );
+        return new WP_REST_Response( array( 
+            'narrative' => $narrative_response,
+            'nextStepId' => $next_step_id  // null means continue current step, non-null means advance
+        ), 200 );
     }
 }
 

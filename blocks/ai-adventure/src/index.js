@@ -6,7 +6,7 @@ import metadata from '../block.json';
 
 registerBlockType( metadata.name, {
 	edit: ( { attributes, setAttributes } ) => {
-		const blockProps = useBlockProps();
+		const blockProps = useBlockProps({ className: 'chubes-game-window' });
 		const { title, adventurePrompt, gameMasterPersona } = attributes;
 
 		return (
@@ -34,7 +34,7 @@ registerBlockType( metadata.name, {
 						className="adventure-prompt"
 						onChange={ ( value ) => setAttributes( { adventurePrompt: value } ) }
 						value={ adventurePrompt }
-						placeholder={ __( 'Enter the main adventure prompt here...', 'chubes-games' ) }
+						placeholder={ __( 'Adventure Description: Describe the overall plot in 2-3 sentences. This will be shown to the player before they start.', 'chubes-games' ) }
 					/>
 					<InnerBlocks
 						allowedBlocks={ [ 'chubes-games/ai-adventure-path' ] }
@@ -44,17 +44,12 @@ registerBlockType( metadata.name, {
 		);
 	},
 	save: ( { attributes } ) => {
-		const { title, adventurePrompt } = attributes;
-		const blockProps = useBlockProps.save();
+		const { adventurePrompt } = attributes;
+		const blockProps = useBlockProps.save({ className: 'chubes-game-window' });
 
 		return (
 			<div { ...blockProps }>
-				<RichText.Content tagName="h2" value={ title } className="adventure-title" />
-				{ /* The adventure prompt is not rendered on the front end, it's for the AI only */ }
-				<div style={ { display: 'none' } } className="adventure-prompt-storage">
-					<RichText.Content tagName="p" value={ adventurePrompt } />
-				</div>
-				<InnerBlocks.Content />
+				<p className="adventure-prompt">{adventurePrompt}</p>
 			</div>
 		);
 	},

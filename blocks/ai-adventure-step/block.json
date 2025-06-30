@@ -20,7 +20,7 @@
 		"stepPrompt": {
 			"type": "string",
 			"source": "html",
-			"selector": "p"
+			"selector": ".ai-adventure-step-prompt"
 		},
 		"stepId": {
 			"type": "string"

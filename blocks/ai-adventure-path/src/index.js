@@ -5,20 +5,39 @@ import metadata from '../block.json';
 
 registerBlockType( metadata.name, {
 	edit: ( { attributes, setAttributes } ) => {
-		const { pathPrompt } = attributes;
+		const blockProps = useBlockProps();
+		const { label, pathPrompt } = attributes;
+
 		return (
-			<div { ...useBlockProps() }>
+			<div { ...blockProps }>
 				<RichText
-					tagName="h4"
+					tagName="h3"
+					onChange={ ( value ) => setAttributes( { label: value } ) }
+					value={ label }
+					placeholder={ __( 'Path Label', 'chubes-games' ) }
+				/>
+				<RichText
+					tagName="p"
 					onChange={ ( value ) => setAttributes( { pathPrompt: value } ) }
 					value={ pathPrompt }
-					placeholder={ __( 'Path Prompt: e.g., "The user enters the dark cave..."', 'chubes-games' ) }
+					placeholder={ __( 'Path Description: Describe this branch of the story...', 'chubes-games' ) }
 				/>
-				<InnerBlocks allowedBlocks={ [ 'chubes-games/ai-adventure-step' ] } />
+				<InnerBlocks
+					allowedBlocks={ [ 'chubes-games/ai-adventure-step' ] }
+				/>
 			</div>
 		);
 	},
 	save: ( { attributes } ) => {
-		return <InnerBlocks.Content />;
+		const { label, pathPrompt } = attributes;
+		const blockProps = useBlockProps.save();
+
+		return (
+			<div { ...blockProps }>
+				<RichText.Content tagName="h3" value={ label } />
+				<RichText.Content tagName="p" value={ pathPrompt } className="ai-adventure-path-prompt" />
+				<InnerBlocks.Content />
+			</div>
+		);
 	},
 } );

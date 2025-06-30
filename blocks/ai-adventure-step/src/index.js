@@ -2,12 +2,72 @@ import { registerBlockType } from '@wordpress/blocks';
 import { useBlockProps, RichText, InspectorControls } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { useEffect } from '@wordpress/element';
-import { PanelBody, TextControl, Button } from '@wordpress/components';
+import { PanelBody, TextControl, Button, SelectControl } from '@wordpress/components';
+import { useSelect } from '@wordpress/data';
 import metadata from '../block.json';
 
 registerBlockType( metadata.name, {
 	edit: ( { attributes, setAttributes, clientId } ) => {
 		const { stepPrompt, stepId, triggers } = attributes;
+
+		// Get all available steps from the block editor
+		const availableSteps = useSelect( ( select ) => {
+			const { getBlocks } = select( 'core/block-editor' );
+			const allBlocks = getBlocks();
+			const steps = [];
+			let currentStepPathId = null;
+			let currentStepIndex = null;
+
+			// Find the AI Adventure parent block
+			const adventureBlock = allBlocks.find( block => block.name === 'chubes-games/ai-adventure' );
+			if ( adventureBlock ) {
+				adventureBlock.innerBlocks.forEach( ( pathBlock, pathIndex ) => {
+					if ( pathBlock.name === 'chubes-games/ai-adventure-path' ) {
+						const pathLabel = pathBlock.attributes.label || `Path ${pathIndex + 1}`;
+						pathBlock.innerBlocks.forEach( ( stepBlock, stepIndex ) => {
+							if ( stepBlock.name === 'chubes-games/ai-adventure-step' ) {
+								const stepLabel = stepBlock.attributes.label || `Step ${stepIndex + 1}`;
+								const stepId = stepBlock.attributes.stepId || stepBlock.clientId;
+								// Identify the current step's path and index
+								if (stepId === attributes.stepId) {
+									currentStepPathId = pathBlock.clientId;
+									currentStepIndex = stepIndex;
+								}
+								steps.push( {
+									value: stepId,
+									label: `${pathLabel} → ${stepLabel}`,
+									pathId: pathBlock.clientId,
+									stepIndex,
+								} );
+							}
+						} );
+					}
+				} );
+			}
+
+			// Filter steps according to the rules
+			const filteredSteps = steps.filter(s => {
+				if (attributes.stepId === s.value) return false; // Exclude self
+				if (s.pathId === currentStepPathId) {
+					// Same path: only allow steps with higher index
+					return s.stepIndex > currentStepIndex;
+				}
+				// Different path: always allow
+				return true;
+			});
+
+			// Add special options
+			const options = [
+				{ value: '', label: __('Select destination...', 'chubes-games') },
+				{ value: 'end_game', label: __('🏁 End Game', 'chubes-games') }
+			];
+			if (filteredSteps.length > 0) {
+				options.push(...filteredSteps);
+				return options;
+			}
+			// If no valid steps, only show End Game
+			return options.filter(opt => opt.value === '' || opt.value === 'end_game');
+		}, [attributes.stepId]);
 
 		useEffect( () => {
 			if ( ! stepId ) {
@@ -35,20 +95,25 @@ registerBlockType( metadata.name, {
 		return (
 			<>
 				<InspectorControls>
-					<PanelBody title={ __( 'Triggers', 'chubes-games' ) }>
+					<PanelBody title={ __( 'Story Triggers', 'chubes-games' ) }>
+						<p className="components-base-control__help">
+							{ __( 'Define semantic conditions that advance the story. Use descriptive phrases like "Player opens the chest" or "Player talks to the wizard".', 'chubes-games' ) }
+						</p>
 						{ triggers.map( ( trigger, index ) => (
-							<div key={ index } className="trigger-item">
+							<div key={ index } className="trigger-item" style={ { marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '4px' } }>
 								<TextControl
-									label={ __( 'Trigger Phrase', 'chubes-games' ) }
+									label={ __( 'Trigger Condition', 'chubes-games' ) }
 									value={ trigger.triggerPhrase }
 									onChange={ ( value ) => handleTriggerChange( value, index, 'triggerPhrase' ) }
-									placeholder="e.g., Player opens the chest"
+									placeholder="e.g., Player decides to enter the cave"
+									help={ __( 'Describe the player action or decision that should trigger this path.', 'chubes-games' ) }
 								/>
-								<TextControl
-									label={ __( 'Destination Step ID', 'chubes-games' ) }
+								<SelectControl
+									label={ __( 'Destination', 'chubes-games' ) }
 									value={ trigger.destinationStep }
 									onChange={ ( value ) => handleTriggerChange( value, index, 'destinationStep' ) }
-									placeholder="Enter step ID or 'end_game'"
+									options={ availableSteps }
+									help={ __( 'Where should the story go when this trigger is activated?', 'chubes-games' ) }
 								/>
 								<Button isLink isDestructive onClick={ () => removeTrigger( index ) }>
 									{ __( 'Remove Trigger', 'chubes-games' ) }
@@ -56,7 +121,7 @@ registerBlockType( metadata.name, {
 							</div>
 						) ) }
 						<Button variant="primary" onClick={ addTrigger }>
-							{ __( 'Add Trigger', 'chubes-games' ) }
+							{ __( 'Add Story Trigger', 'chubes-games' ) }
 						</Button>
 					</PanelBody>
 				</InspectorControls>
@@ -65,14 +130,23 @@ registerBlockType( metadata.name, {
 						tagName="p"
 						onChange={ ( value ) => setAttributes( { stepPrompt: value } ) }
 						value={ stepPrompt }
-						placeholder={ __( 'Step Prompt: e.g., "A treasure chest sits in the center of the room."', 'chubes-games' ) }
+						placeholder={ __( 'Step Action: What is happening at this moment in the story?', 'chubes-games' ) }
 					/>
 				</div>
 			</>
 		);
 	},
-	save: () => {
-		// This block's content is used for prompts and not saved to the front end.
-		return null;
+	save: ( { attributes } ) => {
+		const { stepPrompt, label, stepId, triggers } = attributes;
+		const blockProps = useBlockProps.save({ 
+			'data-step-id': stepId,
+			'data-triggers': JSON.stringify(triggers || [])
+		});
+		return (
+			<div { ...blockProps }>
+				{label && <RichText.Content tagName="h4" value={label} />}
+				{stepPrompt && <RichText.Content tagName="p" value={stepPrompt} className="ai-adventure-step-prompt" />}
+			</div>
+		);
 	},
 } );
