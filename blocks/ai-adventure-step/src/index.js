@@ -2,7 +2,7 @@ import { registerBlockType } from '@wordpress/blocks';
 import { useBlockProps, RichText, InspectorControls } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { useEffect } from '@wordpress/element';
-import { PanelBody, TextControl, Button, SelectControl } from '@wordpress/components';
+import { PanelBody, TextControl, Button, SelectControl, TextareaControl } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import metadata from '../block.json';
 
@@ -15,29 +15,37 @@ registerBlockType( metadata.name, {
 			const { getBlocks } = select( 'core/block-editor' );
 			const allBlocks = getBlocks();
 			const steps = [];
-			let currentStepPathId = null;
-			let currentStepIndex = null;
+			let currentPathIndex = -1;
 
 			// Find the AI Adventure parent block
 			const adventureBlock = allBlocks.find( block => block.name === 'chubes-games/ai-adventure' );
 			if ( adventureBlock ) {
+				// First, find the index of the path containing the current step
+				adventureBlock.innerBlocks.forEach((pathBlock, pathIndex) => {
+					if (pathBlock.innerBlocks.some(stepBlock => stepBlock.clientId === clientId)) {
+						currentPathIndex = pathIndex;
+					}
+				});
+
+				// Now, build the list of available steps from valid paths
 				adventureBlock.innerBlocks.forEach( ( pathBlock, pathIndex ) => {
+					// Only include paths that are at or after the current path
+					if ( pathIndex < currentPathIndex ) {
+						return; // Skip previous paths
+					}
+
 					if ( pathBlock.name === 'chubes-games/ai-adventure-path' ) {
 						const pathLabel = pathBlock.attributes.label || `Path ${pathIndex + 1}`;
-						pathBlock.innerBlocks.forEach( ( stepBlock, stepIndex ) => {
+						pathBlock.innerBlocks.forEach( ( stepBlock ) => {
+							if ( stepBlock.clientId === clientId ) {
+								return; // Skip self
+							}
 							if ( stepBlock.name === 'chubes-games/ai-adventure-step' ) {
-								const stepLabel = stepBlock.attributes.label || `Step ${stepIndex + 1}`;
-								const stepId = stepBlock.attributes.stepId || stepBlock.clientId;
-								// Identify the current step's path and index
-								if (stepId === attributes.stepId) {
-									currentStepPathId = pathBlock.clientId;
-									currentStepIndex = stepIndex;
-								}
+								const stepLabel = stepBlock.attributes.label || `Step for ${stepBlock.clientId.substring(0,4)}`;
+								const stepIdVal = stepBlock.attributes.stepId || stepBlock.clientId;
 								steps.push( {
-									value: stepId,
+									value: stepIdVal,
 									label: `${pathLabel} → ${stepLabel}`,
-									pathId: pathBlock.clientId,
-									stepIndex,
 								} );
 							}
 						} );
@@ -45,29 +53,17 @@ registerBlockType( metadata.name, {
 				} );
 			}
 
-			// Filter steps according to the rules
-			const filteredSteps = steps.filter(s => {
-				if (attributes.stepId === s.value) return false; // Exclude self
-				if (s.pathId === currentStepPathId) {
-					// Same path: only allow steps with higher index
-					return s.stepIndex > currentStepIndex;
-				}
-				// Different path: always allow
-				return true;
-			});
-
 			// Add special options
 			const options = [
 				{ value: '', label: __('Select destination...', 'chubes-games') },
 				{ value: 'end_game', label: __('🏁 End Game', 'chubes-games') }
 			];
-			if (filteredSteps.length > 0) {
-				options.push(...filteredSteps);
-				return options;
+			if (steps.length > 0) {
+				options.push(...steps);
 			}
-			// If no valid steps, only show End Game
-			return options.filter(opt => opt.value === '' || opt.value === 'end_game');
-		}, [attributes.stepId]);
+
+			return options;
+		}, [clientId]);
 
 		useEffect( () => {
 			if ( ! stepId ) {
@@ -101,12 +97,13 @@ registerBlockType( metadata.name, {
 						</p>
 						{ triggers.map( ( trigger, index ) => (
 							<div key={ index } className="trigger-item" style={ { marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '4px' } }>
-								<TextControl
+								<TextareaControl
 									label={ __( 'Trigger Condition', 'chubes-games' ) }
 									value={ trigger.triggerPhrase }
 									onChange={ ( value ) => handleTriggerChange( value, index, 'triggerPhrase' ) }
 									placeholder="e.g., Player decides to enter the cave"
 									help={ __( 'Describe the player action or decision that should trigger this path.', 'chubes-games' ) }
+									rows={ 3 }
 								/>
 								<SelectControl
 									label={ __( 'Destination', 'chubes-games' ) }

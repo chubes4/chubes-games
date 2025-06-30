@@ -8,13 +8,22 @@ const AIAdventureGame = ( { attributes, innerBlocks } ) => {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [playerInput, setPlayerInput] = useState('');
-	const [gameStarted, setGameStarted] = useState(false);
-	const [gameOver, setGameOver] = useState(false);
+	const [gameState, setGameState] = useState('AWAITING_NAME'); // AWAITING_NAME, PLAYING, GAME_OVER
+	const [characterName, setCharacterName] = useState('');
+	const [tempName, setTempName] = useState(''); // For the input field
 	const [currentStepId, setCurrentStepId] = useState(null);
 	const [previousSteps, setPreviousSteps] = useState([]);
 	const [storyProgression, setStoryProgression] = useState([]);
 	const storyLogRef = useRef(null);
 	
+	const handleNameSubmit = (e) => {
+		e.preventDefault();
+		if (tempName.trim()) {
+			setCharacterName(tempName.trim());
+			setGameState('PLAYING');
+		}
+	};
+
 	// Auto-scroll the story log
 	useEffect(() => {
 		if (storyLogRef.current) {
@@ -33,64 +42,76 @@ const AIAdventureGame = ( { attributes, innerBlocks } ) => {
 		return { step: null, path: null };
 	};
 
-	// Opening screen: show title and adventure description
-	if (!gameStarted) {
-		return (
-			<OpeningScreen
-				title={attributes.title || 'AI Adventure'}
-				description={attributes.adventurePrompt || 'No adventure description provided.'}
-				buttonText="Play"
-				onButtonClick={() => setGameStarted(true)}
-			/>
-		);
-	}
-
-	// End game screen
-	if (gameOver) {
-		return (
-			<OpeningScreen
-				title="Game Over"
-				description="Thank you for playing!"
-				buttonText="Restart"
-				onButtonClick={() => {
-					setGameOver(false);
-					setGameStarted(false);
-					setStoryLog([]);
-					setCurrentStepId(null);
-					setPreviousSteps([]);
-					setStoryProgression([]);
-				}}
-			/>
-		);
-	}
-
-	// Fetches the initial narrative when the game starts
-	const getInitialNarrative = async (step, path) => {
+	// Fetches the narrative for a new step's introduction
+	const fetchStepIntroduction = async (stepId) => {
 		setIsLoading(true);
 		setError(null);
 		try {
+			const { step, path } = findStepAndPath(stepId);
+			if (!step || !path) {
+				throw new Error("Could not find the new step's data.");
+			}
+
+			// Extract triggers from the new step to provide context for the intro
+			const triggers = (step.attributes.triggers || []).map((trigger, index) => ({
+				id: trigger.destinationStep || `trigger-${index}`,
+				action: trigger.triggerPhrase,
+				destination: trigger.destinationStep,
+			}));
+
+			// Get the last few messages for transition context
+			const transitionContext = storyLog.slice(-2);
+
 			const response = await apiFetch({
 				path: '/chubes-games/v1/adventure',
 				method: 'POST',
 				data: {
-					is_initial_turn: true,
+					isIntroduction: true,
+					characterName,
+					triggers, // Send the triggers for context
+					transitionContext, // Send the last few messages
 					gameMasterPersona: attributes.gameMasterPersona,
+					adventureTitle: attributes.title,
 					adventurePrompt: attributes.adventurePrompt,
 					pathPrompt: path.attributes.pathPrompt,
 					stepPrompt: step.attributes.stepPrompt,
-					conversationHistory: [],
-					previousSteps: [],
-					storyProgression: [],
 				},
 			});
-			setStoryLog([{ type: 'ai', content: response.narrative }]);
+			setStoryLog(prevLog => [...prevLog, { type: 'ai', content: response.narrative }]);
 		} catch (err) {
-			setError(err.message || 'Error fetching initial narrative.');
+			setError(err.message || "Error fetching the step's introduction.");
 			console.error(err);
 		} finally {
 			setIsLoading(false);
 		}
 	};
+
+	// Initialize the game when Play is pressed OR when a new step is set
+	useEffect(() => {
+		if (gameState !== 'PLAYING') return;
+
+		// If currentStepId is set, fetch its introduction.
+		if (currentStepId) {
+			fetchStepIntroduction(currentStepId);
+			return;
+		}
+
+		// Otherwise, this is the very first turn. Find the first step.
+		const firstStepBlock = Array.isArray(innerBlocks) && innerBlocks.length > 0 && 
+							  Array.isArray(innerBlocks[0].innerBlocks) && innerBlocks[0].innerBlocks.length > 0
+							  ? innerBlocks[0].innerBlocks[0]
+							  : null;
+
+		if (firstStepBlock) {
+			const firstStepId = firstStepBlock.attributes.stepId || firstStepBlock.clientId;
+			setCurrentStepId(firstStepId); // This will trigger the effect again to fetch the intro
+		} else {
+			setError("Game configuration error: No paths or steps found.");
+			setIsLoading(false);
+		}
+	// Only run when gameState becomes PLAYING or currentStepId changes.
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [gameState, currentStepId]);
 
 	// Handles the player's turn
 	const handlePlayerInputSubmit = async (e) => {
@@ -102,7 +123,7 @@ const AIAdventureGame = ( { attributes, innerBlocks } ) => {
 		setStoryLog(prevLog => [...prevLog, { type: 'player', content: currentInput }]);
 		setIsLoading(true);
 		setError(null);
-		
+
 		try {
 			const { step: currentStep, path: currentPath } = findStepAndPath(currentStepId);
 			if (!currentStep) throw new Error("Current game step could not be found.");
@@ -113,19 +134,21 @@ const AIAdventureGame = ( { attributes, innerBlocks } ) => {
 				action: trigger.triggerPhrase,
 				destination: trigger.destinationStep,
 			}));
-			
+
 			// Prepare conversation history and previous steps
 			const conversationHistory = storyLog.slice(-10); // last 10 exchanges
 			const prevSteps = [...previousSteps, currentStepId];
 			const prevStoryProgression = [...storyProgression];
-			
+
 			const response = await apiFetch({
 				path: '/chubes-games/v1/adventure',
 				method: 'POST',
 				data: {
 					playerInput: currentInput,
+					characterName,
 					triggers: triggers,
 					gameMasterPersona: attributes.gameMasterPersona,
+					adventureTitle: attributes.title,
 					adventurePrompt: attributes.adventurePrompt,
 					pathPrompt: currentPath.attributes.pathPrompt,
 					stepPrompt: currentStep.attributes.stepPrompt,
@@ -140,14 +163,13 @@ const AIAdventureGame = ( { attributes, innerBlocks } ) => {
 
 			if (response.nextStepId) {
 				if (response.nextStepId === 'end_game') {
-					setGameOver(true);
+					setGameState('GAME_OVER'); // End the game
 					return;
 				}
 				// Find the trigger that was activated
 				let activatedTrigger = triggers.find(t => t.destination === response.nextStepId);
 				let triggerPhrase = activatedTrigger ? activatedTrigger.action : currentInput;
 				setPreviousSteps(prevSteps);
-				setCurrentStepId(response.nextStepId);
 				setStoryProgression(prev => [
 					...prev,
 					{
@@ -155,6 +177,8 @@ const AIAdventureGame = ( { attributes, innerBlocks } ) => {
 						triggerActivated: triggerPhrase
 					}
 				]);
+				// This will trigger the useEffect to fetch the new step's introduction
+				setCurrentStepId(response.nextStepId);
 			}
 
 		} catch (err) {
@@ -164,105 +188,79 @@ const AIAdventureGame = ( { attributes, innerBlocks } ) => {
 			setIsLoading(false);
 		}
 	};
-	
-	// Narrates the current step when `currentStepId` changes (for story progression)
-	useEffect(() => {
-		if (!currentStepId) return;
-		if (storyLog.length === 0) return; // Don't narrate on the initial setup
 
-		const { step: nextStep, path: nextPath } = findStepAndPath(currentStepId);
-		if (nextStep && nextPath) {
-			const getStepTransition = async () => {
-				setIsLoading(true);
-				try {
-					const response = await apiFetch({
-						path: '/chubes-games/v1/adventure',
-						method: 'POST',
-						data: {
-							is_initial_turn: true,
-							gameMasterPersona: attributes.gameMasterPersona,
-							adventurePrompt: attributes.adventurePrompt,
-							pathPrompt: nextPath.attributes.pathPrompt,
-							stepPrompt: nextStep.attributes.stepPrompt,
-							conversationHistory: storyLog.slice(-10),
-							previousSteps: [...previousSteps, currentStepId],
-							storyProgression: storyProgression,
-						},
-					});
-					setStoryLog(prevLog => [...prevLog, { type: 'ai', content: response.narrative }]);
-				} catch (err) {
-					setError(`Error transitioning to new step: ${err.message}`);
-					console.error(err);
-				} finally {
-			setIsLoading(false);
-				}
-			};
-			
-			getStepTransition();
-		} else {
-			setError(`Error: Could not find step with ID: ${currentStepId}`);
-			setIsLoading(false);
-		}
+	const restartGame = () => {
+		setGameState('AWAITING_NAME');
+		setStoryLog([]);
+		setCurrentStepId(null);
+		setPreviousSteps([]);
+		setStoryProgression([]);
+		setCharacterName('');
+		setTempName('');
+	};
 
-	}, [currentStepId]);
-
-	// Initialize the game
-	useEffect(() => {
-		if (!gameStarted) return;
-		const allSteps = Array.isArray(innerBlocks)
-			? innerBlocks.reduce((acc, path) => {
-				if (Array.isArray(path.innerBlocks)) {
-					return acc.concat(path.innerBlocks);
-				}
-				return acc;
-			}, [])
-			: [];
-		
-		// Use the first step in the first path as the starting step
-		const firstStepBlock = Array.isArray(innerBlocks) && innerBlocks.length > 0 && 
-							  Array.isArray(innerBlocks[0].innerBlocks) && innerBlocks[0].innerBlocks.length > 0
-							  ? innerBlocks[0].innerBlocks[0]
-							  : null;
-		
-		if (firstStepBlock) {
-			const { step, path } = findStepAndPath(firstStepBlock.attributes.stepId);
-			if (step && path) {
-				setCurrentStepId(step.attributes.stepId);
-				setPreviousSteps([]);
-				setStoryProgression([]);
-				getInitialNarrative(step, path);
-			} else {
-				setError("Game consistency error. Could not find path for the first step.");
-				setIsLoading(false);
-			}
-		} else {
-			setError("Game configuration error: No paths or steps found.");
-			setIsLoading(false);
-		}
-	}, [gameStarted, innerBlocks, attributes]);
-
-
-	return (
-			<div className="ai-adventure-game">
-				<div className="story-log" ref={storyLogRef}>
-					{storyLog.map((entry, index) => (
-						<div key={index} className={`story-entry ${entry.type}`}>{entry.content}</div>
-					))}
-					{isLoading && <div className="story-entry ai">...</div>}
-					{error && <div className="story-entry error">{error}</div>}
-				</div>
-				<form className="player-input-form" onSubmit={handlePlayerInputSubmit}>
+	let content;
+	if (gameState === 'AWAITING_NAME') {
+		content = (
+			<OpeningScreen
+				title={attributes.title || 'AI Adventure'}
+				description={attributes.adventurePrompt || 'No adventure description provided.'}
+			>
+				<form onSubmit={handleNameSubmit} className="character-name-form">
 					<input
 						type="text"
-						value={playerInput}
-						onChange={(e) => setPlayerInput(e.target.value)}
-						placeholder="What do you do?"
-						disabled={isLoading}
+						value={tempName}
+						onChange={(e) => setTempName(e.target.value)}
+						placeholder="Enter your character name"
+						autoFocus
 					/>
-					<button type="submit" disabled={isLoading}>Send</button>
+					<button type="submit">Begin Adventure</button>
 				</form>
-		</div>
-	);
+			</OpeningScreen>
+		);
+	} else {
+		content = (
+			<>
+				<div className="story-log" ref={storyLogRef}>
+					{storyLog.map((entry, index) => {
+						// Don't render an entry for the AI if the content is empty.
+						// This prevents blank bubbles during transitions.
+						if (entry.type === 'ai' && !entry.content?.trim()) {
+							return null;
+						}
+						return (
+							<div key={index} className={`story-entry ${entry.type}`}>
+								{entry.type === 'ai' ? renderAIMessage(entry.content) : entry.content}
+							</div>
+						);
+					})}
+					{isLoading && <div className="story-entry ai loading-dots"><span>.</span><span>.</span><span>.</span></div>}
+					{error && <div className="story-entry error">Error: {error}</div>}
+				</div>
+
+				{gameState !== 'GAME_OVER' ? (
+					<form onSubmit={handlePlayerInputSubmit} className="player-input-form">
+						<input
+							type="text"
+							value={playerInput}
+							onChange={(e) => setPlayerInput(e.target.value)}
+							placeholder="What do you do next?"
+							disabled={isLoading}
+							autoFocus
+						/>
+						<button type="submit" disabled={isLoading}>Send</button>
+					</form>
+				) : (
+					<div className="game-over-controls">
+						<div className="story-entry ai">Game Over. Thanks for playing, {characterName}!</div>
+						<button onClick={restartGame} className="restart-button">Play Again</button>
+					</div>
+				)}
+			</>
+		);
+	}
+
+	return <div className="ai-adventure-game">{content}</div>;
 };
 
 const App = ({ attributes, innerBlocks }) => {
@@ -280,71 +278,54 @@ const App = ({ attributes, innerBlocks }) => {
 	);
 };
 
+// Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
-	const gameWrappers = document.querySelectorAll('.wp-block-chubes-games-ai-adventure');
-	console.log('Found AI Adventure blocks:', gameWrappers.length);
-	
-	gameWrappers.forEach((wrapper, index) => {
-		console.log(`Processing block ${index}:`, wrapper);
-		
-		// Extract attributes from the wrapper
-		const attributes = {
-			gameMasterPersona: 'You are a helpful and creative text-based adventure game master.', // Default
-			title: wrapper.querySelector('.adventure-title')?.textContent || '',
-			adventurePrompt: wrapper.querySelector('.adventure-prompt-storage p')?.textContent || ''
-		};
-		
-		// Extract inner blocks from the DOM structure
-		const pathElements = wrapper.querySelectorAll('.wp-block-chubes-games-ai-adventure-path');
-		const innerBlocks = Array.from(pathElements).map((pathEl, pathIndex) => {
-			const pathPrompt = pathEl.querySelector('.ai-adventure-path-prompt')?.textContent || '';
-			const pathLabel = pathEl.querySelector('h3')?.textContent || '';
-			
-			// Get step blocks within this path
-			const stepElements = pathEl.querySelectorAll('.wp-block-chubes-games-ai-adventure-step');
-			const stepBlocks = Array.from(stepElements).map((stepEl, stepIndex) => {
-				const stepPrompt = stepEl.querySelector('.ai-adventure-step-prompt')?.textContent || '';
-				const stepLabel = stepEl.querySelector('h4')?.textContent || '';
-				const stepId = stepEl.dataset.stepId || `step-${pathIndex}-${stepIndex}`;
-				
-				// Extract triggers from data attribute
-				let triggers = [];
-				try {
-					const triggersData = stepEl.dataset.triggers;
-					if (triggersData) {
-						triggers = JSON.parse(triggersData);
-					}
-				} catch (e) {
-					console.warn('Failed to parse triggers for step:', stepId, e);
-					triggers = [];
-				}
-				
-				return {
-					name: 'chubes-games/ai-adventure-step',
-					attributes: {
-						stepPrompt,
-						label: stepLabel,
-						stepId,
-						triggers: triggers // Now properly extracted from DOM
-					}
-				};
-			});
-			
-			return {
-				name: 'chubes-games/ai-adventure-path',
-				attributes: {
-					pathPrompt,
-					label: pathLabel
-				},
-				innerBlocks: stepBlocks
-			};
-		});
-		
-		console.log(`Block ${index} - Extracted data:`, { attributes, innerBlocks });
-		
-		const root = createRoot(wrapper);
-		root.render(<App attributes={attributes} innerBlocks={innerBlocks} />);
+	const adventureBlocks = document.querySelectorAll('.wp-block-chubes-games-ai-adventure');
+	adventureBlocks.forEach(block => {
+		try {
+			const attributes = JSON.parse(block.dataset.attributes || '{}');
+			const innerBlocks = JSON.parse(block.dataset.innerblocks || '[]');
+
+			const root = createRoot(block);
+			root.render(
+				<StrictMode>
+					<AIAdventureGame attributes={attributes} innerBlocks={innerBlocks} />
+				</StrictMode>
+			);
+		} catch (e) {
+			console.error("Failed to initialize AI Adventure Game:", e);
+			block.innerHTML = '<p>Error: Could not load game data. Please check the browser console.</p>';
+		}
 	});
 });
+
+// Function to parse and render AI messages with scene/dialogue distinction
+const renderAIMessage = (content) => {
+	// Parse [SCENE] and [DIALOGUE] tags
+	const parts = content.split(/(\[SCENE\]|\[DIALOGUE\])/);
+	let currentType = 'dialogue'; // Default to dialogue
+	const renderedParts = [];
+
+	parts.forEach((part, index) => {
+		if (part === '[SCENE]') {
+			currentType = 'scene';
+		} else if (part === '[DIALOGUE]') {
+			currentType = 'dialogue';
+		} else if (part.trim()) {
+			renderedParts.push(
+				<span key={index} className={`ai-${currentType}`}>
+					{part.trim()}
+				</span>
+			);
+		}
+	});
+
+	// If no tags found, treat entire message as dialogue
+	if (renderedParts.length === 0) {
+		return <span className="ai-dialogue">{content}</span>;
+	}
+
+	return renderedParts;
+};
 
 export default App; 

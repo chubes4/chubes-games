@@ -8,11 +8,15 @@ Oregon Trail Style for AI Adventure Game
     padding: 1rem;
     font-family: 'Courier New', Courier, monospace;
     color: #00ff00; // Classic green terminal text
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 
     .ai-adventure-game {
         display: flex;
         flex-direction: column;
         height: 100%;
+        overflow: hidden; // This is key: prevents children from expanding the container.
     }
 
     .story-log {
@@ -21,7 +25,7 @@ Oregon Trail Style for AI Adventure Game
         border: 1px dashed #00ff00;
         padding: 1rem;
         margin-bottom: 1rem;
-        min-height: 200px; // Ensure it has some height
+        height: 0; // Set initial height to 0 to allow flex-grow to work properly.
     }
 
     .story-entry {
@@ -37,6 +41,23 @@ Oregon Trail Style for AI Adventure Game
 
         &.ai {
             color: #00ff00;
+            
+            .ai-scene {
+                color: #FFC300; // A vibrant, high-contrast amber for scene-setting.
+                font-style: italic;
+                display: block; // Force line break
+                margin-bottom: 0.5em; // Add space between scene and dialogue
+                line-height: 1.5;
+            }
+            
+            .ai-dialogue {
+                color: #00ff00; // Bright green for character dialogue
+                font-weight: normal;
+                display: block; // Force line break if needed
+                &::before {
+                    content: '> ';
+                }
+            }
         }
 
         &.error {

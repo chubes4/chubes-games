@@ -2,12 +2,51 @@ import { registerBlockType } from '@wordpress/blocks';
 import { useBlockProps, RichText, InnerBlocks, InspectorControls } from '@wordpress/block-editor';
 import { PanelBody, TextareaControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { useSelect } from '@wordpress/data';
+import { useEffect } from '@wordpress/element';
 import metadata from '../block.json';
 
+/**
+ * Recursively sanitizes block data to be JSON-safe.
+ * Removes circular references and unnecessary properties.
+ *
+ * @param {Array} blocks The array of block objects to clean.
+ * @return {Array} A new array of sanitized block objects.
+ */
+const getCleanedInnerBlocks = ( blocks ) => {
+	if ( ! blocks || ! Array.isArray( blocks ) ) {
+		return [];
+	}
+
+	return blocks.map( ( block ) => {
+		// Only keep the properties we need.
+		const cleanedBlock = {
+			name: block.name,
+			attributes: block.attributes,
+			innerBlocks: getCleanedInnerBlocks( block.innerBlocks ), // Recurse
+		};
+		return cleanedBlock;
+	} );
+};
+
 registerBlockType( metadata.name, {
-	edit: ( { attributes, setAttributes } ) => {
+	edit: ( { attributes, setAttributes, clientId } ) => {
 		const blockProps = useBlockProps({ className: 'chubes-game-window' });
 		const { title, adventurePrompt, gameMasterPersona } = attributes;
+
+		// Watch for changes in inner blocks and save them to an attribute.
+		const innerBlocks = useSelect(
+			( select ) => select( 'core/block-editor' ).getBlocksByClientId( clientId )[0]?.innerBlocks,
+			[ clientId ]
+		);
+
+		useEffect( () => {
+			const newInnerBlocksJSON = JSON.stringify( getCleanedInnerBlocks( innerBlocks ) );
+
+			if ( newInnerBlocksJSON !== attributes.innerBlocksJSON ) {
+				setAttributes( { innerBlocksJSON: newInnerBlocksJSON } );
+			}
+		}, [ innerBlocks, attributes.innerBlocksJSON, setAttributes ] );
 
 		return (
 			<>
@@ -44,13 +83,7 @@ registerBlockType( metadata.name, {
 		);
 	},
 	save: ( { attributes } ) => {
-		const { adventurePrompt } = attributes;
-		const blockProps = useBlockProps.save({ className: 'chubes-game-window' });
-
-		return (
-			<div { ...blockProps }>
-				<p className="adventure-prompt">{adventurePrompt}</p>
-			</div>
-		);
+		// We must save the InnerBlocks content for the render_callback to have access to it.
+		return <InnerBlocks.Content />;
 	},
 } );

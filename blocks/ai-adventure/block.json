@@ -13,18 +13,18 @@
 	},
 	"attributes": {
 		"title": {
-			"type": "string",
-			"source": "html",
-			"selector": "h2"
+			"type": "string"
 		},
 		"adventurePrompt": {
-			"type": "string",
-			"source": "html",
-			"selector": ".adventure-prompt-storage p"
+			"type": "string"
 		},
 		"gameMasterPersona": {
 			"type": "string",
 			"default": "You are a helpful and creative text-based adventure game master."
+		},
+		"innerBlocksJSON": {
+			"type": "string",
+			"default": "[]"
 		}
 	},
 	"textdomain": "ai-adventure",
