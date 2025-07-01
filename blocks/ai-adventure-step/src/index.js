@@ -16,38 +16,38 @@ registerBlockType( metadata.name, {
 			const allBlocks = getBlocks();
 			const steps = [];
 			let currentPathIndex = -1;
-
-			// Find the AI Adventure parent block
+			
 			const adventureBlock = allBlocks.find( block => block.name === 'chubes-games/ai-adventure' );
 			if ( adventureBlock ) {
-				// First, find the index of the path containing the current step
+				// First, find the index of the path containing the current step.
 				adventureBlock.innerBlocks.forEach((pathBlock, pathIndex) => {
 					if (pathBlock.innerBlocks.some(stepBlock => stepBlock.clientId === clientId)) {
 						currentPathIndex = pathIndex;
 					}
 				});
 
-				// Now, build the list of available steps from valid paths
+				// Now, iterate through all paths to build the list of valid destinations.
 				adventureBlock.innerBlocks.forEach( ( pathBlock, pathIndex ) => {
-					// Only include paths that are at or after the current path
-					if ( pathIndex < currentPathIndex ) {
-						return; // Skip previous paths
+					// A step can only branch to a path that comes AFTER its own.
+					if ( pathIndex <= currentPathIndex ) {
+						return;
 					}
 
-					if ( pathBlock.name === 'chubes-games/ai-adventure-path' ) {
+					if ( pathBlock.name !== 'chubes-games/ai-adventure-path' ) {
+						return;
+					}
+					
+					// We only want the *first* step of any valid path as a potential destination.
+					const firstStep = pathBlock.innerBlocks[0];
+
+					if ( firstStep && firstStep.name === 'chubes-games/ai-adventure-step' ) {
 						const pathLabel = pathBlock.attributes.label || `Path ${pathIndex + 1}`;
-						pathBlock.innerBlocks.forEach( ( stepBlock ) => {
-							if ( stepBlock.clientId === clientId ) {
-								return; // Skip self
-							}
-							if ( stepBlock.name === 'chubes-games/ai-adventure-step' ) {
-								const stepLabel = stepBlock.attributes.label || `Step for ${stepBlock.clientId.substring(0,4)}`;
-								const stepIdVal = stepBlock.attributes.stepId || stepBlock.clientId;
-								steps.push( {
-									value: stepIdVal,
-									label: `${pathLabel} → ${stepLabel}`,
-								} );
-							}
+						const stepLabel = `Step 1`; // It's always the first step.
+						const stepIdVal = firstStep.attributes.stepId || firstStep.clientId;
+						
+						steps.push( {
+							value: stepIdVal,
+							label: `${pathLabel} → ${stepLabel}`,
 						} );
 					}
 				} );
