@@ -13,6 +13,7 @@
     border: 2px solid #666;
 }
 
+/* Default behavior: all children stack in the same cell (for overlays) */
 .chubes-game-window > * {
     grid-area: 1 / 1 / 2 / 2;
     width: 100%;

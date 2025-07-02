@@ -1,14 +1,35 @@
 <?php
 /**
- * OpenAI API Client for AI Adventure
- * 
- * Handles all communication with the OpenAI API for the AI Adventure game.
+ * OpenAI API Client and Key Management.
+ *
+ * @package Chubes_Games
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly
+    exit; // Exit if accessed directly.
 }
 
+/**
+ * Hooks into a custom filter to provide the OpenAI API key from settings.
+ *
+ * This function is now centralized in the main OpenAI include file.
+ *
+ * @param string|null $key The default key value.
+ * @return string|null The API key from options, or null if not found.
+ */
+function chubes_games_provide_openai_key( $key ) {
+    $options = get_option( 'chubes_games_options' );
+    if ( isset( $options['openai_api_key'] ) && ! empty( $options['openai_api_key'] ) ) {
+        return $options['openai_api_key'];
+    }
+    return $key; // Return original value (null) if not found.
+}
+add_filter( 'chubes_games_get_openai_key', 'chubes_games_provide_openai_key' );
+
+
+/**
+ * Main class for handling OpenAI API communication.
+ */
 class Chubes_Games_OpenAI_Client {
     
     /**
@@ -19,7 +40,7 @@ class Chubes_Games_OpenAI_Client {
      * @return string|WP_Error The message content from the AI or a WP_Error on failure.
      */
     public static function call_openai( $messages, $temperature = 0.2 ) {
-        // Get the API key from the plugin settings
+        // Get the API key from the plugin settings via our filter.
         $api_key = apply_filters( 'chubes_games_get_openai_key', null );
 
         if ( empty( $api_key ) ) {
@@ -29,7 +50,7 @@ class Chubes_Games_OpenAI_Client {
         $api_url = 'https://api.openai.com/v1/chat/completions';
 
         $body = array(
-            'model'       => 'gpt-3.5-turbo',
+            'model'       => 'gpt-4',
             'messages'    => $messages,
             'temperature' => $temperature,
         );
@@ -41,7 +62,7 @@ class Chubes_Games_OpenAI_Client {
                 'Content-Type'  => 'application/json',
             ),
             'body'    => json_encode( $body ),
-            'timeout' => 30,
+            'timeout' => 45,
         ) );
 
         if ( is_wp_error( $response ) ) {

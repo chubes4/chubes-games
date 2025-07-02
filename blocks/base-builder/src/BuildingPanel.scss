@@ -1,0 +1,276 @@
+.chubes-game-window .building-panel {
+	position: absolute !important;
+	bottom: 0 !important;
+	left: 0 !important;
+	right: 0 !important;
+	top: auto !important;
+	height: 200px;
+	background-color: rgba(26, 26, 26, 0.95);
+	border-top: 2px solid #333;
+	border-top-left-radius: 12px;
+	border-top-right-radius: 12px;
+	color: white;
+	font-family: Arial, sans-serif;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
+	z-index: 10;
+	transform: translateY(100%);
+	transition: transform 0.3s ease-in-out;
+
+	&.visible {
+		transform: translateY(0);
+	}
+
+	.panel-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		background-color: #333;
+		padding: 8px 16px;
+		border-top-left-radius: 10px;
+		border-top-right-radius: 10px;
+
+		h3 {
+			margin: 0;
+			font-size: 18px;
+			color: #4a90e2;
+		}
+
+		.close-button {
+			background: none;
+			border: none;
+			color: white;
+			font-size: 24px;
+			cursor: pointer;
+			padding: 0;
+			line-height: 1;
+
+			&:hover {
+				color: #e74c3c;
+			}
+		}
+	}
+
+	.panel-main {
+		display: flex;
+		flex: 1;
+		padding: 12px 16px;
+		gap: 20px;
+	}
+
+	.panel-content {
+		flex: 1;
+		font-size: 14px;
+		
+		p {
+			margin: 4px 0;
+			display: flex;
+			justify-content: space-between;
+		}
+
+		.stat-value {
+			font-weight: bold;
+			color: #4a90e2;
+		}
+
+		.location-invalid-message {
+			color: #e74c3c;
+			font-weight: bold;
+		}
+	}
+
+	// Upgrade mode styles
+	.panel-upgrades {
+		flex: 2;
+		display: flex;
+		gap: 12px;
+		flex-wrap: nowrap;
+		align-items: stretch;
+
+		.upgrade-button {
+			flex: 1 1 0;
+			background-color: #4a90e2;
+			color: white;
+			border: 1px solid #2c5aa0;
+			border-radius: 6px;
+			padding: 12px 8px;
+			font-size: 12px;
+			font-weight: bold;
+			cursor: pointer;
+			transition: all 0.2s;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+
+			.upgrade-title {
+				font-size: 14px;
+				margin-bottom: 4px;
+			}
+
+			.upgrade-effect {
+				font-size: 10px;
+				opacity: 0.8;
+				margin-bottom: 4px;
+			}
+
+			.upgrade-cost {
+				font-size: 11px;
+				color: #ffd700;
+				font-weight: bold;
+			}
+
+			&:hover:not(.disabled) {
+				background-color: #5fa5ff;
+				transform: translateY(-2px);
+				box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+			}
+
+			&.disabled {
+				background-color: #555;
+				color: #999;
+				cursor: not-allowed;
+				border-color: #444;
+				transform: none;
+				box-shadow: none;
+
+				.upgrade-cost {
+					color: #999;
+				}
+			}
+		}
+	}
+
+	.panel-sell {
+		border-top: 1px solid #555;
+		padding-top: 12px;
+		margin-top: 12px;
+		display: flex;
+		justify-content: center;
+
+		.sell-button {
+			background-color: #e74c3c;
+			color: white;
+			border: 1px solid #c0392b;
+			border-radius: 6px;
+			padding: 8px 16px;
+			font-size: 14px;
+			font-weight: bold;
+			cursor: pointer;
+			transition: all 0.2s;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+
+			.sell-amount {
+				font-size: 12px;
+				background-color: rgba(0, 0, 0, 0.2);
+				padding: 2px 6px;
+				border-radius: 4px;
+				color: #ffd700;
+			}
+
+			&:hover {
+				background-color: #ff6b5a;
+				transform: translateY(-2px);
+				box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+			}
+		}
+	}
+
+	// Build mode styles
+	.panel-builds {
+		flex: 2;
+		display: flex;
+		gap: 12px;
+		flex-wrap: wrap;
+
+		.build-button {
+			flex: 1;
+			min-width: 150px;
+			background-color: #27ae60;
+			color: white;
+			border: 1px solid #1e8449;
+			border-radius: 6px;
+			padding: 12px 8px;
+			font-size: 12px;
+			font-weight: bold;
+			cursor: pointer;
+			transition: all 0.2s;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+
+			.build-title {
+				font-size: 14px;
+				margin-bottom: 4px;
+				color: #fff;
+			}
+
+			.build-description {
+				font-size: 10px;
+				opacity: 0.9;
+				margin-bottom: 6px;
+				line-height: 1.2;
+			}
+
+			.build-cost {
+				font-size: 11px;
+				color: #ffd700;
+				font-weight: bold;
+			}
+
+			&:hover:not(:disabled) {
+				background-color: #2ecc71;
+				transform: translateY(-2px);
+				box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+			}
+
+			&:disabled {
+				background-color: #555;
+				color: #999;
+				cursor: not-allowed;
+				border-color: #444;
+				transform: none;
+				box-shadow: none;
+
+				.build-cost {
+					color: #999;
+				}
+			}
+		}
+	}
+}
+
+.game-over-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 20; // Ensure it's above the canvas but below the building panel if it were open
+}
+
+.play-again-button {
+	padding: 15px 30px;
+	font-size: 20px;
+	font-weight: bold;
+	color: white;
+	background-color: #4a90e2;
+	border: 2px solid #2c5aa0;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.2s;
+
+	&:hover {
+		background-color: #5fa5ff;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+	}
+} 

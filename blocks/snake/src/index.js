@@ -1,8 +1,16 @@
+/**
+ * WordPress dependencies
+ */
 import { registerBlockType } from '@wordpress/blocks';
 import { render } from '@wordpress/element';
-import Game from './Game';
+
+/**
+ * Internal dependencies
+ */
+import Edit from './edit';
 import metadata from '../block.json';
 import './style.scss';
+import './editor.css';
 
 // Function to render the React component
 const renderComponent = (element) => {
@@ -11,10 +19,12 @@ const renderComponent = (element) => {
 	}
 };
 
-// Register the block
+/**
+ * Register the block
+ */
 registerBlockType(metadata.name, {
-	edit: () => null, // No editor view
-	save: () => null, // View is rendered via PHP
+	edit: Edit,
+	save: () => null, // View is rendered via PHP with a render.php file
 });
 
 // Find the placeholder element on the frontend and render the component

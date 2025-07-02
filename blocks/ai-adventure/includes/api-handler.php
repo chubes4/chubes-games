@@ -9,9 +9,15 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-// Include dependencies
-require_once __DIR__ . '/openai-client.php';
-require_once __DIR__ . '/prompt-builder.php';
+require_once plugin_dir_path( __FILE__ ) . 'prompt-builder.php';
+
+add_action( 'rest_api_init', function () {
+    register_rest_route( 'chubes-games/v1', '/adventure', array(
+        'methods'  => 'POST',
+        'callback' => array( 'Chubes_Games_AI_Adventure_API', 'handle_adventure_request' ),
+        'permission_callback' => '__return_true',
+    ) );
+} );
 
 class Chubes_Games_AI_Adventure_API {
     
@@ -146,16 +152,5 @@ class Chubes_Games_AI_Adventure_API {
         }
 
         return null;
-    }
-    
-    /**
-     * Registers the REST API endpoint.
-     */
-    public static function register_api_routes() {
-        register_rest_route( 'chubes-games/v1', '/adventure', array(
-            'methods' => 'POST',
-            'callback' => array( __CLASS__, 'handle_adventure_request' ),
-            'permission_callback' => '__return_true', // Public endpoint
-        ) );
     }
 } 

@@ -1,0 +1,20 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "chubes-games/base-builder",
+	"version": "0.1.0",
+	"title": "Base Builder",
+	"category": "widgets",
+	"icon": "games",
+	"description": "A wave survival base defense game where you build and upgrade structures to defend your colony from alien attacks.",
+	"example": {},
+	"supports": {
+		"html": false
+	},
+	"textdomain": "chubes-games",
+	"editorScript": "file:../../build/base-builder/index.js",
+	"editorStyle": "file:../../build/base-builder/index.css",
+	"style": "file:../../build/base-builder/style-index.css",
+	"render": "file:./render.php",
+	"viewScript": "file:../../build/base-builder/view.js"
+}

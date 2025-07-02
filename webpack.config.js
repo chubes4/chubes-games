@@ -3,8 +3,15 @@ const path = require( 'path' );
 const glob = require( 'glob' );
 const fs = require( 'fs' );
 
-// Find all block folders (directories with a block.json file)
-const blockPaths = glob.sync( './blocks/*/block.json' ).map( p => path.dirname( p ) );
+// Find all block folders (directories with a block.json file) using a recursive glob pattern
+const blockPaths = glob.sync( './blocks/**/block.json' ).map( p => {
+    const blockDir = path.dirname( p );
+    // Exclude 'utils' and 'components' directories
+    if ( blockDir.includes('utils') || blockDir.includes('components') ) {
+        return null;
+    }
+    return blockDir;
+}).filter(Boolean); // Filter out null values
 
 // Create entry points for each block
 const entry = blockPaths.reduce( ( acc, blockPath ) => {
