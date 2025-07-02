@@ -16,7 +16,7 @@ export const COMMAND_CENTER_CONFIG = {
 		damage: {
 			name: 'Damage',
 			description: '+5 DMG',
-			cost: 29,
+			cost: 60,
 			effect: (building) => ({
 				...building,
 				attackDamage: building.attackDamage + 5
@@ -25,7 +25,7 @@ export const COMMAND_CENTER_CONFIG = {
 		range: {
 			name: 'Range',
 			description: '+1 Range',
-			cost: 29,
+			cost: 40,
 			effect: (building) => ({
 				...building,
 				attackRange: building.attackRange + 1
@@ -34,7 +34,7 @@ export const COMMAND_CENTER_CONFIG = {
 		fireRate: {
 			name: 'Fire Rate',
 			description: '-50ms Cooldown',
-			cost: 48,
+			cost: 70,
 			effect: (building) => ({
 				...building,
 				attackCooldown: Math.max(100, building.attackCooldown - 50)
@@ -91,5 +91,6 @@ export const createCommandCenter = (x, y) => ({
 		y: y + offset.y,
 	})),
 	isActive: true,
+	upgradeLevels: {},
 	lastTurretAngle: 0
 }); 

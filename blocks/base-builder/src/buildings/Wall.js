@@ -47,5 +47,7 @@ export const createWall = (x, y) => ({
 	x,
 	y,
 	isActive: true,
+	upgradeLevels: {},
+	spikeDamage: 0, // Base walls do no spike damage without upgrades
 	buildCost: WALL_CONFIG.buildCost,
 }); 

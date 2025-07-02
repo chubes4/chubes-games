@@ -34,7 +34,7 @@ import { GameStateManager, GAME_STATUS, GRID_WIDTH, GRID_HEIGHT } from './GameSt
 import { GameRenderer } from './GameRenderer';
 import { calculateSellRefund } from './ResourceManager';
 import BuildingPanel from './BuildingPanel';
-import { applyUpgrade, getBuildingConfig, canAffordUpgrade, createBuilding } from './buildings';
+import { getBuildingConfig, BUILDABLE_TYPES, getUpgradeCost, applyUpgrade, createBuilding } from './buildings';
 
 // Styles
 import './style.scss';
@@ -151,19 +151,23 @@ const Game = React.forwardRef(({ selectedBuilding, setSelectedBuilding, setNugge
 
 	// Expose handlers to parent component
 	React.useImperativeHandle(ref, () => ({
-		handleUpgrade: (upgradeType) => {
+		handleUpgrade: (upgradeType, cost) => {
 			if (!selectedBuilding) return;
+			if (!cost && cost !== 0) return;
 
 			const config = getBuildingConfig(selectedBuilding.type);
-			
-			if (!canAffordUpgrade(selectedBuilding.type, upgradeType, gameState.nuggets)) {
+			const upgrade = config?.upgrades?.[upgradeType];
+
+			// Handle global upgrades (rare inside Game, but keep parity)
+			if (upgrade && upgrade.isGlobal) {
+				const newGlobalUpgrades = applyUpgrade(selectedBuilding, upgradeType, globalUpgrades);
+				setGlobalUpgrades(newGlobalUpgrades);
 				return;
 			}
 
-			const cost = config.upgrades[upgradeType].cost;
-			const upgradedBuilding = applyUpgrade(selectedBuilding, upgradeType);
-
+			// Building-specific upgrades
 			if (gameStateManagerRef.current.spendNuggets(cost)) {
+				const upgradedBuilding = applyUpgrade(selectedBuilding, upgradeType);
 				gameStateManagerRef.current.updateBuilding(selectedBuilding.id, upgradedBuilding);
 				setSelectedBuilding(upgradedBuilding); // Update panel with new stats
 				updateGameState();
@@ -338,25 +342,25 @@ const App = () => {
 	const gameRef = useRef(null);
 
 	const handleUpgrade = (upgradeType) => {
+		if (!selectedBuilding) return;
+		const cost = getUpgradeCost(selectedBuilding, upgradeType);
+		if (nuggets < cost) return;
+
+		setNuggets(nuggets - cost);
+
 		const config = getBuildingConfig(selectedBuilding.type);
 		const upgrade = config?.upgrades?.[upgradeType];
 
-		if (!upgrade || nuggets < upgrade.cost) {
-			return;
-		}
-
-		setNuggets(nuggets - upgrade.cost);
-
 		// Handle global upgrades
-		if (upgrade.isGlobal) {
+		if (upgrade && upgrade.isGlobal) {
 			const newGlobalUpgrades = applyUpgrade(selectedBuilding, upgradeType, globalUpgrades);
 			setGlobalUpgrades(newGlobalUpgrades);
 			return;
 		}
 
-		// Handle standard building-specific upgrades
+		// Building-specific upgrades
 		if (gameRef.current) {
-			gameRef.current.handleUpgrade(upgradeType);
+			gameRef.current.handleUpgrade(upgradeType, cost);
 		}
 	};
 

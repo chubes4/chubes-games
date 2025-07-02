@@ -102,9 +102,12 @@ export class EnemyPathfinder {
       if (obstacles.has(`${nx},${ny}`)) continue;
       // For diagonals ensure no corner cutting
       if (d.x !== 0 && d.y !== 0) {
+        // For diagonal movement, BOTH adjacent orthogonal cells must be free.
+        // This blocks the enemy from sliding past wall corners while still
+        // allowing free-space diagonals.
         const adj1 = `${node.x + d.x},${node.y}`;
         const adj2 = `${node.x},${node.y + d.y}`;
-        if (obstacles.has(adj1) && obstacles.has(adj2)) continue;
+        if (obstacles.has(adj1) || obstacles.has(adj2)) continue;
       }
       result.push({ x: nx, y: ny });
     }
@@ -120,7 +123,8 @@ export class EnemyPathfinder {
     if (dx !== 0 && dy !== 0) {
       const adj1 = `${start.x + dx},${start.y}`;
       const adj2 = `${start.x},${start.y + dy}`;
-      if (obstacles.has(adj1) && obstacles.has(adj2)) return false;
+      // Same strict rule: both orthogonals must be clear for a diagonal step.
+      if (obstacles.has(adj1) || obstacles.has(adj2)) return false;
     }
     return true;
   }

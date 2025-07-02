@@ -73,5 +73,6 @@ export const createTower = (x, y) => ({
 	x,
 	y,
 	isActive: true,
+	upgradeLevels: {},
 	buildCost: TOWER_CONFIG.buildCost,
 }); 

@@ -81,8 +81,19 @@ export class PathPlanner {
 		const target = this.chooseTarget(enemy, allBuildings);
 		if (!target) return { target: null, path: [] };
 
-		// Choose closest perimeter cell to enemy
-		const perimeter = this.getPerimeterCells(target);
+		// Choose closest perimeter cell to enemy, skip cells occupied by buildings
+		let perimeter = this.getPerimeterCells(target);
+		const occupied = new Set();
+		allBuildings.forEach(b=>{
+			if(!b.isActive) return;
+			if(b.cells){ b.cells.forEach(c=>occupied.add(`${c.x},${c.y}`)); }
+			else occupied.add(`${b.x},${b.y}`);
+		});
+		perimeter = perimeter.filter(c=> !occupied.has(`${c.x},${c.y}`));
+		if(perimeter.length===0){
+			// no free perimeter cell; treat as unreachable and fall through to wall-breach logic
+		}
+
 		perimeter.sort((a,b)=> this.getDistance(enemy,a)-this.getDistance(enemy,b));
 
 		// Build obstacle list (all active buildings) – exclude target perimeter cells

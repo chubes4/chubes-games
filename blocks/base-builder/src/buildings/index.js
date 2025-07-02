@@ -59,30 +59,60 @@ export const applyUpgrade = (building, upgradeType, globalUpgrades) => {
 	const config = getBuildingConfig(building.type);
 	const upgrade = config?.upgrades?.[upgradeType];
 
-	if (!upgrade) {
-		return building;
-	}
-    
-    // If the upgrade is global, apply it to the global state
-    if (upgrade.isGlobal) {
-        return upgrade.effect(globalUpgrades);
-    }
+	if (!upgrade) return building;
 
-	// Otherwise, apply it to the building instance
-	return upgrade.effect(building);
+	// Handle global upgrades separately (they modify globalUpgrades object)
+	if (upgrade.isGlobal) {
+		return upgrade.effect(globalUpgrades);
+	}
+
+	// Clone upgradeLevels helper
+	const levels = {
+		...(building.upgradeLevels || {}),
+	};
+	levels[upgradeType] = (levels[upgradeType] || 0) + 1;
+
+	// Apply the upgrade effect to produce the new building stats
+	const updated = upgrade.effect(building);
+
+	return {
+		...updated,
+		upgradeLevels: levels,
+	};
 };
 
 /**
- * Check if a player can afford a specific upgrade.
- * @param {string} buildingType - The type of building.
- * @param {string} upgradeType - The type of upgrade.
- * @param {number} nuggets - The player's current nuggets.
- * @returns {boolean} True if the player can afford the upgrade.
+ * Calculate the scaled cost for an upgrade based on how many times it has
+ * already been purchased for that building. Simple exponential scaling keeps
+ * late-game power spikes under control while still letting early upgrades be
+ * affordable.
+ *
+ * Formula: cost = baseCost * (multiplier ^ currentLevel)
+ * Where multiplier is a tunable constant (default 1.5).
+ *
+ * @param {object} building – The building instance being upgraded.
+ * @param {string} upgradeType – The upgrade key (e.g. 'damage').
+ * @param {number} [multiplier=1.5] – Optional scaling multiplier.
+ * @returns {number} – Nugget cost after scaling & rounding.
  */
-export const canAffordUpgrade = (buildingType, upgradeType, nuggets) => {
-	const config = getBuildingConfig(buildingType);
-	const cost = config?.upgrades?.[upgradeType]?.cost;
-	return cost !== undefined && nuggets >= cost;
+export const getUpgradeCost = (building, upgradeType, multiplier = 1.5) => {
+	const config = getBuildingConfig(building.type);
+	const baseCost = config?.upgrades?.[upgradeType]?.cost ?? Infinity;
+	const currentLevel = building.upgradeLevels?.[upgradeType] || 0;
+	return Math.round(baseCost * Math.pow(multiplier, currentLevel));
+};
+
+/**
+ * Check if the player can afford the next level of an upgrade.
+ *
+ * @param {object} building – Building instance.
+ * @param {string} upgradeType – Upgrade key.
+ * @param {number} nuggets – Player's current currency.
+ * @returns {boolean}
+ */
+export const canAffordUpgrade = (building, upgradeType, nuggets) => {
+	const cost = getUpgradeCost(building, upgradeType);
+	return nuggets >= cost;
 };
 
 export {

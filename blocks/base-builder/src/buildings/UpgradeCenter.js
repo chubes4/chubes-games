@@ -41,5 +41,6 @@ export const createUpgradeCenter = (x, y) => ({
 	x,
 	y,
 	isActive: true,
+	upgradeLevels: {},
 	buildCost: UPGRADE_CENTER_CONFIG.buildCost,
 }); 

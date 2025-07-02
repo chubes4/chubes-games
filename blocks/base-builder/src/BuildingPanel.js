@@ -1,6 +1,6 @@
 import React from 'react';
 import './BuildingPanel.scss';
-import { getBuildingConfig, BUILDABLE_TYPES } from './buildings';
+import { getBuildingConfig, BUILDABLE_TYPES, getUpgradeCost, canAffordUpgrade } from './buildings';
 
 const BuildingPanel = ({ building, nuggets, onUpgrade, onSell, onClose, onBuild, mode = 'upgrade', isBuildLocationValid = true }) => {
 	// If no building and not in build mode, don't show panel
@@ -50,9 +50,8 @@ const BuildingPanel = ({ building, nuggets, onUpgrade, onSell, onClose, onBuild,
 	const config = getBuildingConfig(building.type);
 	if (!config) return null;
 
-	const canAffordUpgrade = (upgradeType) => {
-		const upgrade = config.upgrades[upgradeType];
-		return upgrade && nuggets >= upgrade.cost;
+	const canAffordUpgradeLocal = (upgradeType) => {
+		return canAffordUpgrade(building, upgradeType, nuggets);
 	};
 
 	const getRefundAmount = () => {
@@ -61,7 +60,7 @@ const BuildingPanel = ({ building, nuggets, onUpgrade, onSell, onClose, onBuild,
 	};
 
 	const getUpgradeButtonClass = (upgradeType) => {
-		if (!canAffordUpgrade(upgradeType)) return 'upgrade-button disabled';
+		if (!canAffordUpgradeLocal(upgradeType)) return 'upgrade-button disabled';
 		return 'upgrade-button';
 	};
 
@@ -109,18 +108,21 @@ const BuildingPanel = ({ building, nuggets, onUpgrade, onSell, onClose, onBuild,
 					{renderStats()}
 				</div>
 				<div className="panel-upgrades">
-					{Object.entries(config.upgrades).map(([upgradeType, upgrade]) => (
-						<button
-							key={upgradeType}
-							onClick={() => onUpgrade(upgradeType)}
-							disabled={!canAffordUpgrade(upgradeType)}
-							className={getUpgradeButtonClass(upgradeType)}
-						>
-							<div className="upgrade-title">{upgrade.name}</div>
-							<div className="upgrade-effect">{upgrade.description}</div>
-							<div className="upgrade-cost">{upgrade.cost}💎</div>
-						</button>
-					))}
+					{Object.entries(config.upgrades).map(([upgradeType, upgrade]) => {
+						const cost = getUpgradeCost(building, upgradeType);
+						return (
+							<button
+								key={upgradeType}
+								onClick={() => onUpgrade(upgradeType)}
+								disabled={!canAffordUpgradeLocal(upgradeType)}
+								className={getUpgradeButtonClass(upgradeType)}
+							>
+								<div className="upgrade-title">{upgrade.name}</div>
+								<div className="upgrade-effect">{upgrade.description}</div>
+								<div className="upgrade-cost">{cost}💎</div>
+							</button>
+						);
+					})}
 				</div>
 				{showSellButton && (
 					<div className="panel-sell">
