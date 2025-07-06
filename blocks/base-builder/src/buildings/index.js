@@ -90,6 +90,8 @@ export const applyUpgrade = (building, upgradeType, globalUpgrades) => {
  * Formula: cost = baseCost * (multiplier ^ currentLevel)
  * Where multiplier is a tunable constant (default 1.5).
  *
+ * Note: Repair upgrades always cost the base amount (no scaling).
+ *
  * @param {object} building – The building instance being upgraded.
  * @param {string} upgradeType – The upgrade key (e.g. 'damage').
  * @param {number} [multiplier=1.5] – Optional scaling multiplier.
@@ -98,6 +100,12 @@ export const applyUpgrade = (building, upgradeType, globalUpgrades) => {
 export const getUpgradeCost = (building, upgradeType, multiplier = 1.5) => {
 	const config = getBuildingConfig(building.type);
 	const baseCost = config?.upgrades?.[upgradeType]?.cost ?? Infinity;
+	
+	// Repair upgrades don't scale - always cost the base amount
+	if (upgradeType === 'repair') {
+		return baseCost;
+	}
+	
 	const currentLevel = building.upgradeLevels?.[upgradeType] || 0;
 	return Math.round(baseCost * Math.pow(multiplier, currentLevel));
 };

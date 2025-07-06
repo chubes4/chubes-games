@@ -32,9 +32,13 @@ import { EnemyManager } from './enemies';
 import { ProjectileManager } from './ProjectileManager';
 import { GameStateManager, GAME_STATUS, GRID_WIDTH, GRID_HEIGHT } from './GameState';
 import { GameRenderer } from './GameRenderer';
-import { calculateSellRefund } from './ResourceManager';
 import BuildingPanel from './BuildingPanel';
-import { getBuildingConfig, BUILDABLE_TYPES, getUpgradeCost, applyUpgrade, createBuilding } from './buildings';
+import { BUILDABLE_TYPES, getUpgradeCost, createBuilding, getBuildingConfig } from './buildings';
+import { TurretManager } from './buildings/mechanics/TurretManager';
+import { attemptUpgrade } from './buildings/mechanics/UpgradeManager';
+import { sellBuilding as sellBuildingHelper } from './buildings/mechanics/SellBuilding';
+import { attemptRepair } from './buildings/mechanics/RepairHandler';
+import { getSelection } from './utils/SelectionManager';
 
 // Styles
 import './style.scss';
@@ -48,6 +52,7 @@ const Game = React.forwardRef(({ selectedBuilding, setSelectedBuilding, setNugge
 	const animationFrameRef = useRef(null);
 	const [gameState, setGameState] = useState(null);
 	const [isBuildLocationValid, setIsBuildLocationValid] = useState(true);
+	const turretManagerRef = useRef(null);
 
 	// Initialize managers
 	useEffect(() => {
@@ -55,6 +60,7 @@ const Game = React.forwardRef(({ selectedBuilding, setSelectedBuilding, setNugge
 		gameRendererRef.current = new GameRenderer(canvasRef.current);
 		enemyManagerRef.current = new EnemyManager(GRID_WIDTH, GRID_HEIGHT);
 		projectileManagerRef.current = new ProjectileManager();
+		turretManagerRef.current = new TurretManager(projectileManagerRef.current);
 		
 		// Set initial game state
 		setGameState(gameStateManagerRef.current.getState());
@@ -88,34 +94,21 @@ const Game = React.forwardRef(({ selectedBuilding, setSelectedBuilding, setNugge
 			const clickX = event.clientX - rect.left;
 			const clickY = event.clientY - rect.top;
 
-			// Convert to grid coordinates
 			const gridX = Math.floor((clickX - layout.offsetX) / layout.actualCellSize);
 			const gridY = Math.floor((clickY - layout.offsetY) / layout.actualCellSize);
 
-			// Check if click is within grid bounds
-			if (gridX < 0 || gridX >= GRID_WIDTH || gridY < 0 || gridY >= GRID_HEIGHT) {
-				return;
+			const sel = getSelection(gridX, gridY, gameState);
+			switch(sel.mode){
+				case 'command-center':
+				case 'building':
+					setSelectedBuilding(sel.building);
+					break;
+				case 'build':
+					setSelectedBuilding({ type:'build', x: sel.x, y: sel.y});
+					break;
+				default:
+					break;
 			}
-
-			// Check main building click
-			const isCommandCenterCell = gameState.mainBuilding.cells.some(cell => cell.x === gridX && cell.y === gridY);
-			if (isCommandCenterCell) {
-				setSelectedBuilding(gameState.mainBuilding);
-				return;
-			}
-
-			// Check other buildings click
-			const clickedBuilding = gameState.buildings.find(building => 
-				building.x === gridX && building.y === gridY
-			);
-			
-			if (clickedBuilding) {
-				setSelectedBuilding(clickedBuilding);
-				return;
-			}
-
-			// Empty grid click - open build panel
-			setSelectedBuilding({ type: 'build', x: gridX, y: gridY });
 		};
 
 		canvas.addEventListener('click', handleClick);
@@ -151,34 +144,20 @@ const Game = React.forwardRef(({ selectedBuilding, setSelectedBuilding, setNugge
 
 	// Expose handlers to parent component
 	React.useImperativeHandle(ref, () => ({
-		handleUpgrade: (upgradeType, cost) => {
-			if (!selectedBuilding) return;
-			if (!cost && cost !== 0) return;
-
-			const config = getBuildingConfig(selectedBuilding.type);
-			const upgrade = config?.upgrades?.[upgradeType];
-
-			// Handle global upgrades (rare inside Game, but keep parity)
-			if (upgrade && upgrade.isGlobal) {
-				const newGlobalUpgrades = applyUpgrade(selectedBuilding, upgradeType, globalUpgrades);
-				setGlobalUpgrades(newGlobalUpgrades);
-				return;
-			}
-
-			// Building-specific upgrades
-			if (gameStateManagerRef.current.spendNuggets(cost)) {
-				const upgradedBuilding = applyUpgrade(selectedBuilding, upgradeType);
-				gameStateManagerRef.current.updateBuilding(selectedBuilding.id, upgradedBuilding);
-				setSelectedBuilding(upgradedBuilding); // Update panel with new stats
+		handleUpgrade: (upgradeType) => {
+			if (!selectedBuilding) return { success:false };
+			const result = attemptUpgrade(gameStateManagerRef.current, selectedBuilding, upgradeType, globalUpgrades);
+			if (result.success) {
+				if (result.updatedBuilding) setSelectedBuilding(result.updatedBuilding);
+				if (result.globalUpgrades) setGlobalUpgrades(result.globalUpgrades);
 				updateGameState();
 			}
+			return result;
 		},
 		
 		handleSell: (buildingId) => {
-			const building = gameStateManagerRef.current.removeBuilding(buildingId);
-			if (building) {
-				const refund = calculateSellRefund(building);
-				gameStateManagerRef.current.resources.nuggets += refund;
+			const res = sellBuildingHelper(gameStateManagerRef.current, buildingId);
+			if (res.success) {
 				updateGameState();
 			}
 			setSelectedBuilding(null);
@@ -207,6 +186,7 @@ const Game = React.forwardRef(({ selectedBuilding, setSelectedBuilding, setNugge
 			gameStateManagerRef.current.reset();
 			enemyManagerRef.current = new EnemyManager(GRID_WIDTH, GRID_HEIGHT);
 			projectileManagerRef.current = new ProjectileManager();
+			turretManagerRef.current = new TurretManager(projectileManagerRef.current);
 			setSelectedBuilding(null);
 			updateGameState();
 		}
@@ -266,47 +246,8 @@ const Game = React.forwardRef(({ selectedBuilding, setSelectedBuilding, setNugge
 				const currentTime = Date.now();
 				const allBuildings = gameStateManagerRef.current.getAllBuildings();
 				
-				// Building attack logic
-				allBuildings.forEach(building => {
-					if (building.attackDamage > 0 && currentTime - building.lastAttackTime > building.attackCooldown) {
-						const enemies = enemyManagerRef.current.getEnemies();
-						const enemiesInRange = enemies.filter(enemy => {
-							const dx = enemy.x - building.x;
-							const dy = enemy.y - building.y;
-							const distance = Math.sqrt(dx * dx + dy * dy);
-							return distance <= building.attackRange;
-						});
-
-						if (enemiesInRange.length > 0) {
-							// Target closest enemy
-							const closestEnemy = enemiesInRange.reduce((closest, enemy) => {
-								const distToClosest = Math.sqrt((closest.x - building.x)**2 + (closest.y - building.y)**2);
-								const distToEnemy = Math.sqrt((enemy.x - building.x)**2 + (enemy.y - building.y)**2);
-								return distToEnemy < distToClosest ? enemy : closest;
-							});
-
-							// Save turret angle for rendering
-							building.lastTurretAngle = Math.atan2(
-								closestEnemy.y - building.y,
-								closestEnemy.x - building.x
-							);
-
-							// Fire projectiles
-							const projectileCount = building.projectileCount || 1;
-							const targets = enemiesInRange.sort((a, b) => {
-								const distA = Math.sqrt((a.x - building.x)**2 + (a.y - building.y)**2);
-								const distB = Math.sqrt((b.x - building.x)**2 + (b.y - building.y)**2);
-								return distA - distB;
-							}).slice(0, projectileCount);
-
-							targets.forEach(target => {
-								projectileManagerRef.current.createProjectile(building, target, building.attackDamage);
-							});
-							
-							building.lastAttackTime = currentTime;
-						}
-					}
-				});
+				// Building attack logic handled by TurretManager
+				turretManagerRef.current.update(allBuildings, enemyManagerRef.current, currentTime);
 
 				// Update enemies and projectiles
 				if (enemyManagerRef.current) {
@@ -343,24 +284,15 @@ const App = () => {
 
 	const handleUpgrade = (upgradeType) => {
 		if (!selectedBuilding) return;
-		const cost = getUpgradeCost(selectedBuilding, upgradeType);
-		if (nuggets < cost) return;
+		const costPreview = getUpgradeCost(selectedBuilding, upgradeType);
+		if (nuggets < costPreview) return;
 
-		setNuggets(nuggets - cost);
-
-		const config = getBuildingConfig(selectedBuilding.type);
-		const upgrade = config?.upgrades?.[upgradeType];
-
-		// Handle global upgrades
-		if (upgrade && upgrade.isGlobal) {
-			const newGlobalUpgrades = applyUpgrade(selectedBuilding, upgradeType, globalUpgrades);
-			setGlobalUpgrades(newGlobalUpgrades);
-			return;
-		}
-
-		// Building-specific upgrades
 		if (gameRef.current) {
-			gameRef.current.handleUpgrade(upgradeType, cost);
+			const result = gameRef.current.handleUpgrade(upgradeType);
+			if (result?.success) {
+				setNuggets(prev => prev - result.cost);
+				if (result.globalUpgrades) setGlobalUpgrades(result.globalUpgrades);
+			}
 		}
 	};
 

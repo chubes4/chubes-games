@@ -106,8 +106,8 @@ export class EnemyMovement {
 		});
 		if (occupied) {
 			enemy.stuckFrames += 1;
-			return enemy;
-		}
+		return enemy;
+	}
 
 		// Stuck frame accounting
 		const moved = this.distance({ x: newX, y: newY }, enemy.lastPos);

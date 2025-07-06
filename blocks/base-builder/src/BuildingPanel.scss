@@ -254,6 +254,7 @@
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	flex-direction: column;
 	z-index: 20; // Ensure it's above the canvas but below the building panel if it were open
 }
 
@@ -267,6 +268,7 @@
 	border-radius: 8px;
 	cursor: pointer;
 	transition: all 0.2s;
+	margin-top: 40px; // Add space between the canvas-drawn "GAME OVER" text and the button
 
 	&:hover {
 		background-color: #5fa5ff;

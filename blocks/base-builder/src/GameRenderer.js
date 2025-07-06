@@ -99,8 +99,8 @@ export class GameRenderer {
 			this.renderSelectionHighlight(building, layout);
 		}
 
-		// Draw health bar
-		this.renderHealthBar(building, layout);
+		// Health bars rendered in a separate pass for proper z-order
+		// (see renderHealthBarsAll)
 	}
 
 	// Render turret for towers and command center
@@ -161,7 +161,15 @@ export class GameRenderer {
 		drawHealthBar(this.context, healthBarX, healthBarY, healthBarWidth, building.health, building.maxHealth, healthBarHeight);
 	}
 
-	// Render all buildings
+	// Render all health bars in a dedicated pass so they appear on top of buildings
+	renderHealthBarsAll(buildings, layout){
+		buildings.forEach(b=>{
+			if(b.health>=b.maxHealth) return; // Skip full-health
+			this.renderHealthBar(b, layout);
+		});
+	}
+
+	// Render all buildings (visuals only; health bars done separately)
 	renderBuildings(buildings, layout, selectedBuilding = null) {
 		buildings.forEach(building => {
 			const isSelected = selectedBuilding && selectedBuilding.id === building.id;
@@ -224,6 +232,9 @@ export class GameRenderer {
 		// Render buildings
 		const allBuildings = [gameState.mainBuilding, ...gameState.buildings];
 		this.renderBuildings(allBuildings, layout, selectedBuilding);
+
+		// Render health bars pass
+		this.renderHealthBarsAll(allBuildings, layout);
 
 		// Render build selection if in build mode
 		if (selectedBuilding && selectedBuilding.type === 'build') {
