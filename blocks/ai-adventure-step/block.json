@@ -33,6 +33,5 @@
 	"parent": [ "chubes-games/ai-adventure-path" ],
 	"textdomain": "ai-adventure-step",
 	"editorScript": "file:../../build/ai-adventure-step/index.js",
-	"editorStyle": "file:../../build/ai-adventure-step/editor.css",
-	"style": "file:../../build/ai-adventure-step/style.css"
+	"editorStyle": "file:../../build/ai-adventure-step/editor.css"
 }

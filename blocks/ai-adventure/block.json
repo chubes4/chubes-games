@@ -31,7 +31,6 @@
 	"editorScript": "file:../../build/ai-adventure/index.js",
 	"viewScript": "file:../../build/ai-adventure/view.js",
 	"editorStyle": "file:../../build/ai-adventure/editor.css",
-	"style": "file:../../build/ai-adventure/style-style.css",
 	"providesContext": {
 		"chubes-games/adventurePrompt": "adventurePrompt"
 	}

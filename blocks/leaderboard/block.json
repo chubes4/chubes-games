@@ -12,6 +12,5 @@
     "textdomain": "leaderboard",
     "editorScript": "file:../../build/leaderboard/index.js",
     "editorStyle": "file:../../build/leaderboard/editor.css",
-    "style": "file:../../build/leaderboard/style-index.css",
     "render": "file:./render.php"
 } 

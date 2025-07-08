@@ -85,3 +85,95 @@ function chubes_games_enqueue_main_styles() {
     }
 }
 add_action( 'wp_enqueue_scripts', 'chubes_games_enqueue_main_styles' );
+
+/**
+ * Conditionally enqueue block-specific frontend assets only when blocks are present.
+ */
+function chubes_games_enqueue_block_assets() {
+    // Only load assets if we're on a page with our blocks
+    if ( ! has_block( 'chubes-games/base-builder' ) && 
+         ! has_block( 'chubes-games/snake' ) && 
+         ! has_block( 'chubes-games/ai-adventure' ) && 
+         ! has_block( 'chubes-games/leaderboard' ) ) {
+        return;
+    }
+
+    // Enqueue base-builder assets
+    if ( has_block( 'chubes-games/base-builder' ) ) {
+        $style_path = CHUBES_GAMES_PATH . 'build/base-builder/style-index.css';
+        if ( file_exists( $style_path ) ) {
+            wp_enqueue_style(
+                'chubes-games-base-builder',
+                CHUBES_GAMES_URL . 'build/base-builder/style-index.css',
+                array(),
+                filemtime( $style_path )
+            );
+        }
+    }
+
+    // Enqueue snake assets
+    if ( has_block( 'chubes-games/snake' ) ) {
+        $style_path = CHUBES_GAMES_PATH . 'build/snake/style-index.css';
+        if ( file_exists( $style_path ) ) {
+            wp_enqueue_style(
+                'chubes-games-snake',
+                CHUBES_GAMES_URL . 'build/snake/style-index.css',
+                array(),
+                filemtime( $style_path )
+            );
+        }
+    }
+
+    // Enqueue ai-adventure assets
+    if ( has_block( 'chubes-games/ai-adventure' ) ) {
+        $style_path = CHUBES_GAMES_PATH . 'build/ai-adventure/style-style.css';
+        if ( file_exists( $style_path ) ) {
+            wp_enqueue_style(
+                'chubes-games-ai-adventure',
+                CHUBES_GAMES_URL . 'build/ai-adventure/style-style.css',
+                array(),
+                filemtime( $style_path )
+            );
+        }
+    }
+
+    // Enqueue leaderboard assets
+    if ( has_block( 'chubes-games/leaderboard' ) ) {
+        $style_path = CHUBES_GAMES_PATH . 'build/leaderboard/style-index.css';
+        if ( file_exists( $style_path ) ) {
+            wp_enqueue_style(
+                'chubes-games-leaderboard',
+                CHUBES_GAMES_URL . 'build/leaderboard/style-index.css',
+                array(),
+                filemtime( $style_path )
+            );
+        }
+    }
+
+    // Enqueue ai-adventure-path assets
+    if ( has_block( 'chubes-games/ai-adventure-path' ) ) {
+        $style_path = CHUBES_GAMES_PATH . 'build/ai-adventure-path/style-style.css';
+        if ( file_exists( $style_path ) ) {
+            wp_enqueue_style(
+                'chubes-games-ai-adventure-path',
+                CHUBES_GAMES_URL . 'build/ai-adventure-path/style-style.css',
+                array(),
+                filemtime( $style_path )
+            );
+        }
+    }
+
+    // Enqueue ai-adventure-step assets
+    if ( has_block( 'chubes-games/ai-adventure-step' ) ) {
+        $style_path = CHUBES_GAMES_PATH . 'build/ai-adventure-step/style.css';
+        if ( file_exists( $style_path ) ) {
+            wp_enqueue_style(
+                'chubes-games-ai-adventure-step',
+                CHUBES_GAMES_URL . 'build/ai-adventure-step/style.css',
+                array(),
+                filemtime( $style_path )
+            );
+        }
+    }
+}
+add_action( 'wp_enqueue_scripts', 'chubes_games_enqueue_block_assets' );
