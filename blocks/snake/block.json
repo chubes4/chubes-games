@@ -1,6 +1,7 @@
 {
     "apiVersion": 2,
     "name": "chubes-games/snake",
+    "version": "0.2.0",
     "title": "Snake Game",
     "description": "A playable Snake game block. Use arrow keys to control the snake. Game over if you crash into yourself.",
     "category": "widgets",

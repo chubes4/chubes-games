@@ -2,7 +2,7 @@
 /*
 Plugin Name: Chubes Games
 Description: A collection of modular Gutenberg game blocks for WordPress. Each game is a separate block, starting with Snake.
-Version: 0.1.0
+Version: 0.2.0
 Author: Chris Huber
 Author URI: https://chubes.net
 */
@@ -23,9 +23,9 @@ if ( ! defined( 'CHUBES_GAMES_URL' ) ) {
 }
 
 // Include shared functionality
+require_once CHUBES_GAMES_PATH . 'inc/post-type.php';
 require_once CHUBES_GAMES_PATH . 'inc/admin.php';
 require_once CHUBES_GAMES_PATH . 'inc/score.php';
-require_once CHUBES_GAMES_PATH . 'inc/openai.php';
 
 /**
  * Registers all blocks from the 'blocks' directory.
@@ -53,19 +53,7 @@ function chubes_games_register_all_blocks() {
             require_once $index_file;
         }
 
-        // Prepare args for registration. We default to an empty array.
-        $args = [];
-        $block_data = json_decode( file_get_contents( $filename ), true );
-        
-        // Only assign a render_callback if the block doesn't define a 'render' file in block.json
-        // and a specific callback function exists for it.
-        if ( ! isset( $block_data['render'] ) ) {
-            if ( $block_data['name'] === 'chubes-games/ai-adventure' && function_exists( 'chubes_games_render_ai_adventure_block' ) ) {
-                $args['render_callback'] = 'chubes_games_render_ai_adventure_block';
-            }
-        }
-        
-        register_block_type( $block_folder, $args );
+        register_block_type( $block_folder );
     }
 }
 add_action( 'init', 'chubes_games_register_all_blocks' );
@@ -93,7 +81,6 @@ function chubes_games_enqueue_block_assets() {
     // Only load assets if we're on a page with our blocks
     if ( ! has_block( 'chubes-games/base-builder' ) && 
          ! has_block( 'chubes-games/snake' ) && 
-         ! has_block( 'chubes-games/ai-adventure' ) && 
          ! has_block( 'chubes-games/leaderboard' ) ) {
         return;
     }
@@ -124,19 +111,6 @@ function chubes_games_enqueue_block_assets() {
         }
     }
 
-    // Enqueue ai-adventure assets
-    if ( has_block( 'chubes-games/ai-adventure' ) ) {
-        $style_path = CHUBES_GAMES_PATH . 'build/ai-adventure/style-style.css';
-        if ( file_exists( $style_path ) ) {
-            wp_enqueue_style(
-                'chubes-games-ai-adventure',
-                CHUBES_GAMES_URL . 'build/ai-adventure/style-style.css',
-                array(),
-                filemtime( $style_path )
-            );
-        }
-    }
-
     // Enqueue leaderboard assets
     if ( has_block( 'chubes-games/leaderboard' ) ) {
         $style_path = CHUBES_GAMES_PATH . 'build/leaderboard/style-index.css';
@@ -150,30 +124,5 @@ function chubes_games_enqueue_block_assets() {
         }
     }
 
-    // Enqueue ai-adventure-path assets
-    if ( has_block( 'chubes-games/ai-adventure-path' ) ) {
-        $style_path = CHUBES_GAMES_PATH . 'build/ai-adventure-path/style-style.css';
-        if ( file_exists( $style_path ) ) {
-            wp_enqueue_style(
-                'chubes-games-ai-adventure-path',
-                CHUBES_GAMES_URL . 'build/ai-adventure-path/style-style.css',
-                array(),
-                filemtime( $style_path )
-            );
-        }
-    }
-
-    // Enqueue ai-adventure-step assets
-    if ( has_block( 'chubes-games/ai-adventure-step' ) ) {
-        $style_path = CHUBES_GAMES_PATH . 'build/ai-adventure-step/style.css';
-        if ( file_exists( $style_path ) ) {
-            wp_enqueue_style(
-                'chubes-games-ai-adventure-step',
-                CHUBES_GAMES_URL . 'build/ai-adventure-step/style.css',
-                array(),
-                filemtime( $style_path )
-            );
-        }
-    }
 }
 add_action( 'wp_enqueue_scripts', 'chubes_games_enqueue_block_assets' );

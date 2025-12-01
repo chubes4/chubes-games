@@ -1,6 +1,6 @@
 {
   "name": "chubes-games",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A collection of modular Gutenberg game blocks for WordPress. Each game is a separate block, starting with Snake.",
   "author": "Chris Huber <https://chubes.net>",
   "license": "GPL-2.0-or-later",
