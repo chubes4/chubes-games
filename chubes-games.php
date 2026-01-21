@@ -2,7 +2,7 @@
 /*
 Plugin Name: Chubes Games
 Description: A collection of modular Gutenberg game blocks for WordPress. Each game is a separate block, starting with Snake.
-Version: 0.2.0
+Version: 0.2.1
 Author: Chris Huber
 Author URI: https://chubes.net
 */
