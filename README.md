@@ -8,13 +8,7 @@ Chubes Games is a collection of interactive game blocks for the WordPress Gutenb
 
 ## Games
 
-### AI Adventure Series
-Interactive text-based adventure games with:
-- **ai-adventure**: Main game block with opening screen and story initialization
-- **ai-adventure-path**: Manages story paths and branching narratives
-- **ai-adventure-step**: Handles individual story steps and choices
-- OpenAI API integration for dynamic story generation
-- Path and step blocks for story progression
+Note: AI Adventure / OpenAI integration was removed (see `docs/CHANGELOG.md`).
 
 ### Base Builder
 Tower defense game featuring:
@@ -41,14 +35,13 @@ Competitive scoring system with:
 ## Requirements
 
 - WordPress 5.8+
-- PHP 7.4+
+- PHP 8.0+
 - Node.js 16+ (for development)
+- MySQL 5.6+ (for score storage)
 
 ## Installation
 
-1. Download the latest release from the repository
-2. Upload the plugin to your WordPress installation
-3. Activate the plugin
+See `docs/installation.md` for environment-specific installation guidance.
 
 ## Development
 
@@ -68,14 +61,6 @@ The plugin uses automatic block discovery:
 - Main plugin scans `blocks/` directory for `block.json` files
 - Each block is registered using `register_block_type()` with the directory path
 - Assets are conditionally loaded only when blocks are present
-- OpenAI integration requires API key configuration
-
-## Configuration
-
-### AI Adventure Setup
-1. Configure OpenAI API key in WordPress admin
-2. Set up prompt templates in the plugin settings
-3. Customize adventure parameters as needed
 
 ## License
 

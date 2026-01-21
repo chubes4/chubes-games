@@ -2,39 +2,38 @@
 
 ## Requirements
 
-- WordPress 5.0 or higher
-- PHP 7.4 or higher
+- WordPress 5.8 or higher
+- PHP 8.0 or higher
 - MySQL 5.6 or higher
 - Node.js 16 or higher (for development)
 
-## Installation Steps
+## Installation
 
-1. Download the plugin ZIP file from the releases page
-2. In WordPress admin, go to Plugins > Add New
-3. Click "Upload Plugin"
-4. Upload the `chubes-games.zip` file
-5. Activate the plugin
+(Developer note: installation steps vary by environment; this page avoids step-by-step setup details.)
 
-The plugin will automatically:
-- Register the `game` custom post type
-- Create database tables for score tracking
-- Register game blocks in Gutenberg editor
+## Plugin Behavior After Activation
+
+After activation, the plugin:
+
+- Registers the `game` custom post type
+- Creates the `wp_chubes_games_scores` table for score tracking
+- Registers the Base Builder, Snake, and Leaderboard blocks
 
 ## Development Setup
 
 For development:
 
-1. Clone the repository
-2. Run `npm install` to install dependencies
-3. Run `npm run start` for development server
-4. Run `npm run build` to create production build
+- `npm install`
+- `npm run start` (development server)
+- `npm run build` (production build)
 
 ## Database Tables
 
-The plugin creates a custom table `wp_chubes_game_scores` for tracking:
+The plugin creates a custom table `wp_chubes_games_scores` for tracking:
 - User scores
-- Game completion times
-- Achievement data
+- Player name
+- Timestamped score entries
+- Game identifiers
 
 ## Available Games
 

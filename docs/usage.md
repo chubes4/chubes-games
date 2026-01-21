@@ -14,12 +14,10 @@ A complex tower defense game with resource management and strategic gameplay.
 - Upgrade system for buildings
 - Health and damage mechanics
 
-#### Gameplay
-1. Start with a Command Center
-2. Collect resources automatically
-3. Build defensive structures
-4. Upgrade buildings for better performance
-5. Survive enemy waves
+#### Gameplay Highlights
+- Start with a command center and expand structures
+- Collect resources and spend them on upgrades
+- Survive enemy waves with automated defenses
 
 #### Controls
 - Click buildings to select them
@@ -50,7 +48,7 @@ Displays high scores and rankings for games.
 - Global leaderboard display
 - User score tracking
 - Sortable by game and score
-- Responsive design
+- Score data comes from the `chubes_games_scores` table
 
 ## REST API Endpoints
 
@@ -64,7 +62,7 @@ The plugin provides REST API endpoints for score management:
 ### Components
 - **Game Blocks**: Individual Gutenberg blocks for each game
 - **Score System**: Database-backed score tracking
-- **Admin Interface**: Score management in WordPress admin
+- **Score Storage**: Database-backed score tracking
 
 ### Technical Details
 - Canvas-based rendering for games
@@ -81,8 +79,5 @@ npm run build  # Production build
 npm run start  # Development server
 ```
 
-### Adding New Games
-1. Create new block directory under `/blocks/`
-2. Implement game logic in React components
-3. Add score tracking integration
-4. Register block in main plugin file
+### Block Registration
+Blocks are registered automatically by scanning `blocks/` for `block.json` files.
