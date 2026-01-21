@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- docs
+
 ## [0.2.0] - 2025-11-30
 
 ### Added
