@@ -1,13 +1,13 @@
 .wp-block-chubes-games-leaderboard {
     border: 1px solid #444;
-    padding: 1.25em;
+    padding: 1.25rem;
     background-color: #2d3436;
     color: #fff;
 }
 
 .wp-block-chubes-games-leaderboard h4 {
     margin-top: 0;
-    margin-bottom: 1em;
+    margin-bottom: 1rem;
     font-size: 1.25rem;
 }
 
@@ -18,7 +18,7 @@
 
 .wp-block-chubes-games-leaderboard th,
 .wp-block-chubes-games-leaderboard td {
-    padding: 0.75em;
+    padding: 0.75rem;
     text-align: left;
     border-bottom: 1px solid #444;
 }
